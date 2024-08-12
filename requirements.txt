@@ -1,0 +1,14 @@
+jupyter
+pytubefix 
+moviepy 
+openai-whisper 
+langchain 
+langchain-text-splitters 
+langchain-core 
+langchain-community 
+lancedb 
+langchain-openai 
+tiktoken 
+openai 
+python-dotenv 
+azure-cognitiveservices-speech
