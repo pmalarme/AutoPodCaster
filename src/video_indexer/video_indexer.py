@@ -2,11 +2,18 @@ from dotenv import load_dotenv
 from pytubefix import YouTube
 from moviepy.editor import VideoFileClip
 from azure.servicebus.aio import ServiceBusClient
+from openai import AzureOpenAI
+from langchain_core.documents.base import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_openai import AzureOpenAIEmbeddings
+from langchain_community.vectorstores import LanceDB
 
 import os
 import asyncio
 import json
 import whisper
+import tiktoken
+import lancedb
 
 # Load the environment variables
 load_dotenv()
@@ -44,6 +51,10 @@ async def main():
                     print(f"Video indexed: {video_url}")
                     await receiver.complete_message(message)
 
+def num_tokens_from_string(string: str, encoding_name: str) -> int:
+    encoding = tiktoken.encoding_for_model(encoding_name)
+    num_tokens = len(encoding.encode(string))
+    return num_tokens
 
 def index_video(video_url: str):
     youtube_video = YouTube(video_url)
@@ -89,6 +100,114 @@ def index_video(video_url: str):
 
     with open(get_file(transcriptFileName), "w") as f:
         f.write(result["text"])
+
+    # Create the prompt to improve each transcript chunk using the title and the description of the video (technologies, people names, etc.)
+    prompt_template = """Given title and description of a video, can you check its transcript and correct it. Give back only the corrected transcript.
+
+    Title: {title}
+    Description:
+    {description}
+
+    Transcript:
+    {transcript}
+    """
+
+    # Create the gpt-4o model client
+    azure_openai_client = AzureOpenAI(
+      api_key=os.environ['OPENAI_API_KEY'],
+      azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
+      api_version=os.environ['OPENAI_API_VERSION']
+    )
+
+    encoding_name = 'gpt-4o'
+
+    # Split the text in chunks of maximum 500 tokens with '.' as separator without using langchain
+    sentences = result['text'].split('.')
+    chunks = []
+    chunk = ''
+    chunk_number = 1
+    for sentence in sentences:
+        if num_tokens_from_string(chunk + sentence, encoding_name) > 500:
+            prompt = prompt_template.format(title=title, description=description, transcript=chunk)
+            corrected_chunk = azure_openai_client.chat.completions.create(
+                model="gpt-4o",
+                temperature=0,
+                top_p=1,
+                messages=[
+                    {"role": "user", "content": prompt},
+                ],
+            ).choices[0].message.content
+            chunks.append(corrected_chunk)
+            chunk = sentence + '. '
+            chunk_number += 1
+        else:
+            chunk += sentence + '. '
+        
+    # Write the last chunk
+    prompt = prompt_template.format(title=title, description=description, transcript=chunk)
+    corrected_chunk = azure_openai_client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0,
+        top_p=1,
+        messages=[
+            {"role": "user", "content": prompt},
+        ],
+    ).choices[0].message.content
+    chunks.append(corrected_chunk)
+
+    # Create the full corrected transcript and add white-lines between the chunks but not for the last chunk
+    full_corrected_transcript = ''
+
+    for i, chunk in enumerate(chunks):
+        full_corrected_transcript += chunk
+        if i < len(chunks) - 1:
+            full_corrected_transcript += '\n\n'
+    
+    # Write the full corrected transcript
+    full_corrected_transcript_file_name = temporary_video_filename.split('.')[0] + '_corrected.txt'
+
+    with open(get_file(full_corrected_transcript_file_name), "w") as f:
+        f.write(full_corrected_transcript)
+
+    # Create langchain document
+    document = Document(
+      page_content=full_corrected_transcript,
+      metadata={
+        "title": title,
+        "source": url,
+        "description": description,
+        "thumbnail_url": thumbnail_url,
+        "page": 0,
+        "type": "video"
+     }
+    )
+
+    documents = [document]  # List of documents to be processed
+
+    # Split the document in chunks of maximum 1000 characters with 200 characters overlap using langchain
+    text_splitter = RecursiveCharacterTextSplitter(
+      chunk_size=1000,
+      chunk_overlap=200
+    )
+    splits = text_splitter.split_documents(documents)
+
+    # Define the embeddings model
+    azure_openai_embeddings = AzureOpenAIEmbeddings(
+      api_key=os.environ['OPENAI_API_KEY'],
+      azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
+      api_version=os.environ['OPENAI_API_VERSION'],
+      azure_deployment=os.environ['OPENAI_AZURE_DEPLOYMENT_EMBEDDINGS']
+    )
+
+    # Create the vector store
+    db = lancedb.connect("/tmp/lancedb")
+
+    vectorstore = LanceDB.from_documents(
+      documents=splits,
+      embedding=azure_openai_embeddings
+    )
+
+    retriever = vectorstore.as_retriever()
 
 
 def get_file(file_name: str):
