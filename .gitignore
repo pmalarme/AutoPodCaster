@@ -1,6 +1,7 @@
 .env
 .venv
 outputs
+__pycache__
 **/*.ipynb_checkpoints/
 src/notebooks/.ipynb_checkpoints/
 src/outputs/
