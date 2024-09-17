@@ -63,7 +63,9 @@ async def index(inputBody: InputBody):
     # If it is a URL
     if input.startswith("http"):
         # If it is a YouTube URL
-        if "youtube.com" or "youtu.be" in input:
+        if "youtube.com" in input:
+            queue = 'video'
+        elif "youtu.be" in input:
             queue = 'video'
         else:
             queue = 'website'
