@@ -3,6 +3,7 @@
 RESOURCE_GROUP_NAME=${RESOURCE_GROUP_NAME:-"rg-autopodcaster"}
 LOCATION=${LOCATION:-"swedencentral"}
 SERVICEBUS_NAMESPACE_NAME=${SERVICEBUS_NAMESPACE_NAME:-"sb-autopodcaster"}
+COSMOSDB_ACCOUNT_NAME=${COSMOSDB_ACCOUNT_NAME:-"cosno-autopodcaster"}
 
 az group create --name $RESOURCE_GROUP_NAME --location $LOCATION
 az servicebus namespace create --resource-group $RESOURCE_GROUP_NAME --name $SERVICEBUS_NAMESPACE_NAME --location $LOCATION
@@ -24,3 +25,15 @@ az storage container create --name "uploads" --account-name $STORAGE_ACCOUNT_NAM
 
 # Get the connection string for the storage account
 STORAGE_CONNECTION_STRING=$(az storage account show-connection-string --name $STORAGE_ACCOUNT_NAME --query connectionString --output tsv)
+
+# Create a Cosmos DB account
+az cosmosdb create --name $COSMOSDB_ACCOUNT_NAME --resource-group $RESOURCE_GROUP_NAME --locations regionName="Sweden Central" isZoneRedundant=false
+# Create database
+az cosmosdb sql database create --account-name $COSMOSDB_ACCOUNT_NAME --name "autopodcaster" --resource-group $RESOURCE_GROUP_NAME
+# Create status container
+az cosmosdb sql container create --name "status" --account-name $COSMOSDB_ACCOUNT_NAME --database-name "autopodcaster" --resource-group $RESOURCE_GROUP_NAME --partition-key-path "/id"
+# Create input container
+az cosmosdb sql container create --name "inputs" --account-name $COSMOSDB_ACCOUNT_NAME --database-name "autopodcaster" --resource-group $RESOURCE_GROUP_NAME --partition-key-path "/id"
+
+# Get the connection string for the Cosmos DB account
+COSMOSDB_CONNECTION_STRING=$(az cosmosdb list-connection-strings --name $COSMOSDB_ACCOUNT_NAME --resource-group $RESOURCE_GROUP_NAME --query connectionStrings[0].connectionString --output tsv)

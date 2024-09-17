@@ -7,7 +7,9 @@ from langchain_core.documents.base import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_community.vectorstores import LanceDB
+from azure.cosmos import CosmosClient
 from langchain_community.vectorstores.azuresearch import AzureSearch
+
 
 import os
 import asyncio
@@ -15,11 +17,46 @@ import json
 import whisper
 import tiktoken
 import lancedb
+import uuid
+import requests
 
 # Load the environment variables
 load_dotenv()
 
 servicebus_connection_string = os.getenv("SERVICEBUS_CONNECTION_STRING")
+cosmosdb_connection_string = os.getenv("COSMOSDB_CONNECTION_STRING")
+status_endpoint = os.getenv("STATUS_ENDPOINT")
+
+
+class Input:
+    id: str
+    title: str
+    date: str
+    last_updated: str
+    author: str
+    description: str
+    source: str
+    type: str
+    thumbnail_url: str
+    topics: list
+    entities: list
+    content: str
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "date": self.date,
+            "last_updated": self.last_updated,
+            "author": self.author,
+            "description": self.description,
+            "source": self.source,
+            "type": self.type,
+            "thumbnail_url": self.thumbnail_url,
+            "topics": self.topics,
+            "entities": self.entities,
+            "content": self.content
+        }
 
 
 async def main():
@@ -38,10 +75,27 @@ async def main():
                 for message in received_messages:
                     video_input = json.loads(str(message))
                     video_url = video_input['input']
-                    print(f"Indexing video: {video_url}")
-                    index_video(video_url)
-                    print(f"Video indexed: {video_url}")
+                    update_status(video_input['request_id'], "Indexing")
+                    input = index_video(video_url)
+                    update_status(video_input['request_id'], "Indexed")
+                    save_to_cosmosdb(input)
+                    update_status(video_input['request_id'], "Saved")
                     await receiver.complete_message(message)
+
+
+def save_to_cosmosdb(input: Input):
+    client = CosmosClient.from_connection_string(cosmosdb_connection_string)
+    database_name = "autopodcaster"
+    database = client.get_database_client(database_name)
+    container_name = "inputs"
+    container = database.get_container_client(container_name)
+    container.create_item(body=input.to_dict())
+
+
+def update_status(request_id: str, status: str):
+    status = {"status": status}
+    requests.post(
+        f"{status_endpoint}/status/{request_id}", json=status)
 
 
 def num_tokens_from_string(string: str, encoding_name: str) -> int:
@@ -54,21 +108,28 @@ def index_video(video_url: str):
     youtube_video = YouTube(video_url)
 
     title = youtube_video.title
-    url = youtube_video.watch_url
     description = youtube_video.description
+    url = youtube_video.watch_url
     thumbnail_url = youtube_video.thumbnail_url
+
+    input = Input()
+    input.id = str(uuid.uuid4())
+    input.title = title
+    input.date = youtube_video.publish_date.isoformat()
+    input.last_updated = youtube_video.publish_date.isoformat()
+    input.author = youtube_video.author
+    input.description = description
+    input.source = url
+    input.type = 'video'
+    input.thumbnail_url = thumbnail_url
+    input.topics = []
+    input.entities = []
 
     temporary_video_filename = youtube_video.streams \
         .filter(progressive=True, file_extension='mp4') \
         .order_by('resolution').desc() \
         .first() \
         .download(output_path='outputs')
-
-    # Create the information file
-    escaped_description = description.replace('\n', '\\n').replace('"', '\\"')
-    info_file_name = temporary_video_filename.split('.')[0] + '_info.json'
-    with open(get_file(info_file_name), 'w') as f:
-        f.write(f'{{"title": "{title}", "url": "{url}", "description": "{escaped_description}", "thumbnail_url": "{thumbnail_url}"}}')
 
     # Create the file name for the audio file
     audioFileName = temporary_video_filename.split('.')[0] + '.wav'
@@ -159,6 +220,8 @@ def index_video(video_url: str):
         if i < len(chunks) - 1:
             full_corrected_transcript += '\n\n'
 
+    input.content = full_corrected_transcript
+
     # Write the full corrected transcript
     full_corrected_transcript_file_name = temporary_video_filename.split('.')[
         0] + '_corrected.txt'
@@ -204,8 +267,8 @@ def index_video(video_url: str):
     )
 
     retriever = vectorstore.as_retriever()
-    '''
-    # Create the vector store
+'''
+# Create the vector store
     index_name = os.getenv("AZURE_SEARCH_INDEX_NAME"),
     vector_store = AzureSearch(
         azure_search_endpoint=os.getenv("AZURE_SEARCH_ENDPOINT"),
@@ -220,7 +283,6 @@ def retrieve(query: str, num_results: int, vector_store: VectorStore, search_typ
     results =  vector_store.similarity_search(query=query,k=num_results,search_type=search_type)    
     return results
 """
-
 def get_file(file_name: str):
     """Get file path
 
