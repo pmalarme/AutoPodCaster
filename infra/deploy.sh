@@ -15,6 +15,11 @@ az servicebus queue create --resource-group $RESOURCE_GROUP_NAME --namespace-nam
 az servicebus queue create --resource-group $RESOURCE_GROUP_NAME --namespace-name $SERVICEBUS_NAMESPACE_NAME --name "video" --enable-partitioning true
 az servicebus queue create --resource-group $RESOURCE_GROUP_NAME --namespace-name $SERVICEBUS_NAMESPACE_NAME --name "website" --enable-partitioning true
 
+# Create new queues for blog, podcast, and presentation
+az servicebus queue create --resource-group $RESOURCE_GROUP_NAME --namespace-name $SERVICEBUS_NAMESPACE_NAME --name "blog" --enable-partitioning true
+az servicebus queue create --resource-group $RESOURCE_GROUP_NAME --namespace-name $SERVICEBUS_NAMESPACE_NAME --name "podcast" --enable-partitioning true
+az servicebus queue create --resource-group $RESOURCE_GROUP_NAME --namespace-name $SERVICEBUS_NAMESPACE_NAME --name "presentation" --enable-partitioning true
+
 # Get the connection string for the Service Bus namespace
 SERVICEBUS_CONNECTION_STRING=$(az servicebus namespace authorization-rule keys list --resource-group $RESOURCE_GROUP_NAME --namespace-name $SERVICEBUS_NAMESPACE_NAME --name RootManageSharedAccessKey --query primaryConnectionString --output tsv)
 
