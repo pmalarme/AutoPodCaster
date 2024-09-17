@@ -32,8 +32,10 @@ az cosmosdb create --name $COSMOSDB_ACCOUNT_NAME --resource-group $RESOURCE_GROU
 az cosmosdb sql database create --account-name $COSMOSDB_ACCOUNT_NAME --name "autopodcaster" --resource-group $RESOURCE_GROUP_NAME
 # Create status container
 az cosmosdb sql container create --name "status" --account-name $COSMOSDB_ACCOUNT_NAME --database-name "autopodcaster" --resource-group $RESOURCE_GROUP_NAME --partition-key-path "/id"
-# Create input container
+# Create inputs container
 az cosmosdb sql container create --name "inputs" --account-name $COSMOSDB_ACCOUNT_NAME --database-name "autopodcaster" --resource-group $RESOURCE_GROUP_NAME --partition-key-path "/id"
+# Create subjects container
+az cosmosdb sql container create --name "subjects" --account-name $COSMOSDB_ACCOUNT_NAME --database-name "autopodcaster" --resource-group $RESOURCE_GROUP_NAME --partition-key-path "/id"
 
 # Get the connection string for the Cosmos DB account
 COSMOSDB_CONNECTION_STRING=$(az cosmosdb list-connection-strings --name $COSMOSDB_ACCOUNT_NAME --resource-group $RESOURCE_GROUP_NAME --query connectionStrings[0].connectionString --output tsv)
