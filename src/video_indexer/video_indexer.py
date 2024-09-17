@@ -19,15 +19,6 @@ import lancedb
 load_dotenv()
 
 servicebus_connection_string = os.getenv("SERVICEBUS_CONNECTION_STRING")
-improve_transcript_prompt_template = """Given title and description of a video, can you check its transcript and correct it. Give back only the corrected transcript.
-
-Title: {title}
-Description:
-{description}
-
-Transcript:
-{transcript}
-"""
 
 
 async def main():
@@ -51,10 +42,12 @@ async def main():
                     print(f"Video indexed: {video_url}")
                     await receiver.complete_message(message)
 
+
 def num_tokens_from_string(string: str, encoding_name: str) -> int:
     encoding = tiktoken.encoding_for_model(encoding_name)
     num_tokens = len(encoding.encode(string))
     return num_tokens
+
 
 def index_video(video_url: str):
     youtube_video = YouTube(video_url)
@@ -114,9 +107,9 @@ def index_video(video_url: str):
 
     # Create the gpt-4o model client
     azure_openai_client = AzureOpenAI(
-      api_key=os.environ['OPENAI_API_KEY'],
-      azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
-      api_version=os.environ['OPENAI_API_VERSION']
+        api_key=os.environ['OPENAI_API_KEY'],
+        azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
+        api_version=os.environ['OPENAI_API_VERSION']
     )
 
     encoding_name = 'gpt-4o'
@@ -128,7 +121,8 @@ def index_video(video_url: str):
     chunk_number = 1
     for sentence in sentences:
         if num_tokens_from_string(chunk + sentence, encoding_name) > 500:
-            prompt = prompt_template.format(title=title, description=description, transcript=chunk)
+            prompt = prompt_template.format(
+                title=title, description=description, transcript=chunk)
             corrected_chunk = azure_openai_client.chat.completions.create(
                 model="gpt-4o",
                 temperature=0,
@@ -142,9 +136,10 @@ def index_video(video_url: str):
             chunk_number += 1
         else:
             chunk += sentence + '. '
-        
+
     # Write the last chunk
-    prompt = prompt_template.format(title=title, description=description, transcript=chunk)
+    prompt = prompt_template.format(
+        title=title, description=description, transcript=chunk)
     corrected_chunk = azure_openai_client.chat.completions.create(
         model="gpt-4o",
         temperature=0,
@@ -162,49 +157,50 @@ def index_video(video_url: str):
         full_corrected_transcript += chunk
         if i < len(chunks) - 1:
             full_corrected_transcript += '\n\n'
-    
+
     # Write the full corrected transcript
-    full_corrected_transcript_file_name = temporary_video_filename.split('.')[0] + '_corrected.txt'
+    full_corrected_transcript_file_name = temporary_video_filename.split('.')[
+        0] + '_corrected.txt'
 
     with open(get_file(full_corrected_transcript_file_name), "w") as f:
         f.write(full_corrected_transcript)
 
     # Create langchain document
     document = Document(
-      page_content=full_corrected_transcript,
-      metadata={
-        "title": title,
-        "source": url,
-        "description": description,
-        "thumbnail_url": thumbnail_url,
-        "page": 0,
-        "type": "video"
-     }
+        page_content=full_corrected_transcript,
+        metadata={
+            "title": title,
+            "source": url,
+            "description": description,
+            "thumbnail_url": thumbnail_url,
+            "page": 0,
+            "type": "video"
+        }
     )
 
     documents = [document]  # List of documents to be processed
 
     # Split the document in chunks of maximum 1000 characters with 200 characters overlap using langchain
     text_splitter = RecursiveCharacterTextSplitter(
-      chunk_size=1000,
-      chunk_overlap=200
+        chunk_size=1000,
+        chunk_overlap=200
     )
     splits = text_splitter.split_documents(documents)
 
     # Define the embeddings model
     azure_openai_embeddings = AzureOpenAIEmbeddings(
-      api_key=os.environ['OPENAI_API_KEY'],
-      azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
-      api_version=os.environ['OPENAI_API_VERSION'],
-      azure_deployment=os.environ['OPENAI_AZURE_DEPLOYMENT_EMBEDDINGS']
+        api_key=os.environ['OPENAI_API_KEY'],
+        azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
+        api_version=os.environ['OPENAI_API_VERSION'],
+        azure_deployment=os.environ['OPENAI_AZURE_DEPLOYMENT_EMBEDDINGS']
     )
 
     # Create the vector store
     db = lancedb.connect("/tmp/lancedb")
 
     vectorstore = LanceDB.from_documents(
-      documents=splits,
-      embedding=azure_openai_embeddings
+        documents=splits,
+        embedding=azure_openai_embeddings
     )
 
     retriever = vectorstore.as_retriever()
