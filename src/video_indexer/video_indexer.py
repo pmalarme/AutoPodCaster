@@ -8,6 +8,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_community.vectorstores import LanceDB
 from azure.cosmos import CosmosClient
+from langchain_community.vectorstores.azuresearch import AzureSearch
+
 
 import os
 import asyncio
@@ -102,7 +104,7 @@ def num_tokens_from_string(string: str, encoding_name: str) -> int:
     return num_tokens
 
 
-def index_video(video_url: str):
+def index_video(video_url: str) -> Input:
     youtube_video = YouTube(video_url)
 
     title = youtube_video.title
@@ -231,10 +233,11 @@ def index_video(video_url: str):
     document = Document(
         page_content=full_corrected_transcript,
         metadata={
-            "title": title,
-            "source": url,
-            "description": description,
-            "thumbnail_url": thumbnail_url,
+            "id": input.id,
+            "title": input.title,
+            "source": input.source,
+            "description": input.description,
+            "thumbnail_url": input.thumbnail_url,
             "page": 0,
             "type": "video"
         }
@@ -258,16 +261,22 @@ def index_video(video_url: str):
     )
 
     # Create the vector store
-    db = lancedb.connect("/tmp/lancedb")
-
-    vectorstore = LanceDB.from_documents(
-        documents=splits,
-        embedding=azure_openai_embeddings
+    vector_store = AzureSearch(
+        azure_search_endpoint=os.getenv("AZURE_SEARCH_ENDPOINT"),
+        azure_search_key=os.getenv("AZURE_SEARCH_ADMIN_KEY"),
+        index_name="knowledgebase",
+        embedding_function=azure_openai_embeddings.embed_query,
     )
-
-    retriever = vectorstore.as_retriever()
+    vector_store.add_documents(documents=splits)
 
     return input
+
+
+# Retriever
+def retrieve(query: str, num_results: int, vector_store: AzureSearch, search_type="hybrid"):
+    results = vector_store.similarity_search(
+        query=query, k=num_results, search_type=search_type)
+    return results
 
 
 def get_file(file_name: str):
