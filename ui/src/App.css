@@ -40,3 +40,15 @@
 .read-the-docs {
   color: #888;
 }
+
+.single-line-ellipsis {
+  white-space: nowrap;       /* Prevents text from wrapping */
+  overflow: hidden;          /* Hides overflowed text */
+  text-overflow: ellipsis;   /* Adds the ellipsis */
+  width: 40em;               /* Adjust as needed */
+  text-align: left;
+}
+
+.text-left-align {
+  text-align: left;
+}
