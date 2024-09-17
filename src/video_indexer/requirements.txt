@@ -10,3 +10,5 @@ langchain_community==0.2.11
 openai-whisper==20231117
 tiktoken==0.7.0
 lancedb==0.12.0
+azure-cosmos==4.7.0
+requests==2.32.3
