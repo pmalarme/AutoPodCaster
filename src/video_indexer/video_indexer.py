@@ -7,6 +7,7 @@ from langchain_core.documents.base import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_community.vectorstores import LanceDB
+from langchain_community.vectorstores.azuresearch import AzureSearch
 
 import os
 import asyncio
@@ -194,8 +195,7 @@ def index_video(video_url: str):
         api_version=os.environ['OPENAI_API_VERSION'],
         azure_deployment=os.environ['OPENAI_AZURE_DEPLOYMENT_EMBEDDINGS']
     )
-
-    # Create the vector store
+    '''
     db = lancedb.connect("/tmp/lancedb")
 
     vectorstore = LanceDB.from_documents(
@@ -204,7 +204,22 @@ def index_video(video_url: str):
     )
 
     retriever = vectorstore.as_retriever()
-
+    '''
+    # Create the vector store
+    index_name = os.getenv("AZURE_SEARCH_INDEX_NAME"),
+    vector_store = AzureSearch(
+        azure_search_endpoint=os.getenv("AZURE_SEARCH_ENDPOINT"),
+        azure_search_key=os.getenv("AZURE_SEARCH_ADMIN_KEY"),
+        index_name=index_name,
+        embedding_function=azure_openai_embeddings.embed_query,
+    )
+    vector_store.add_documents(documents=splits)
+"""
+# Retriever
+def retrieve(query: str, num_results: int, vector_store: VectorStore, search_type="hybrid") -> List[Document]:
+    results =  vector_store.similarity_search(query=query,k=num_results,search_type=search_type)    
+    return results
+"""
 
 def get_file(file_name: str):
     """Get file path
