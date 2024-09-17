@@ -1,3 +1,12 @@
-fastapi==0.112.0
 python-dotenv==1.0.1
 pytubefix==6.9.2
+moviepy==1.0.3
+azure-servicebus==7.12.2
+openai==1.40.3
+langchain_core==0.2.29
+langchain_text_splitters==0.2.2
+langchain_openai==0.1.21
+langchain_community==0.2.11
+openai-whisper==20231117
+tiktoken==0.7.0
+lancedb==0.12.0

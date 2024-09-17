@@ -8,6 +8,12 @@ The indexer is a tool to create a indexer job based on the inputs.
 pip install -r requirements.txt
 ```
 
+Install fast api standard library
+
+```bash
+pip install fastapi[standard]==0.112.0
+```
+
 ## Deploy the infrastructure
 
 ```bash
