@@ -54,4 +54,3 @@ AI_SEARCH_ENDPOINT=https://$AI_SEARCH_SERVICE_NAME.search.windows.net
 
 # Get the admin key for the Azure Search service
 AI_SEARCH_ADMIN_KEY=$(az search admin-key show --service-name $AI_SEARCH_SERVICE_NAME --resource-group $RESOURCE_GROUP_NAME --query primaryKey --output tsv)
-

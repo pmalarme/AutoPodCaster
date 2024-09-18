@@ -1,0 +1,13 @@
+requests
+python-dotenv
+azure-servicebus
+azure-cosmos
+langchain_core
+langchain_text_splitters
+langchain_openai
+langchain_community
+tiktoken
+lancedb
+azure-search-documents
+azure-identity
+playwright
