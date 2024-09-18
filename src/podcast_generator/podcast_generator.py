@@ -13,6 +13,7 @@ from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 import azure.cognitiveservices.speech as speechsdk
 import json
+from azure.storage.blob import BlobServiceClient
 
 import datetime
 import os
@@ -21,11 +22,13 @@ import uuid
 import requests
 import asyncio
 
-load_dotenv()
+load_dotenv(override=True)
 
 servicebus_connection_string = os.getenv("SERVICEBUS_CONNECTION_STRING")
 cosmosdb_connection_string = os.getenv("COSMOSDB_CONNECTION_STRING")
 output_status_endpoint = os.getenv("OUTPUT_STATUS_ENDPOINT")
+# blob_service_client = BlobServiceClient.from_connection_string(
+#     os.getenv("STORAGE_CONNECTION_STRING"))
 subject_space_endpoint = os.getenv("SUBJECT_SPACE_ENDPOINT")
 
 # Define the embeddings model
@@ -194,44 +197,6 @@ def process_podcast(subject_id: str) -> Output:
 
     generate_podcast_audio(subject, ssml_script)
 
-#     # Generate podcast script and audio
-#     podcast_script = generate_podcast_script(subject_json)
-#     podcast_audio = generate_podcast_audio(podcast_script)
-
-#     input.content = podcast_script
-
-#     return input
-
-
-# def generate_podcast_script(subject_json):
-#     title = subject_json['subject']
-#     description = subject_json.get('description', '')
-
-#     prompt_template = """Given title and description of a subject, can you create a podcast script. Give back only the script.
-
-#     Title: {title}
-#     Description:
-#     {description}
-
-#     Script:
-#     """
-
-#     azure_openai_client = AzureOpenAI(
-#         api_key=os.environ['OPENAI_API_KEY'],
-#         azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
-#         api_version=os.environ['OPENAI_API_VERSION']
-#     )
-
-#     prompt = prompt_template.format(title=title, description=description)
-#     podcast_script_response = azure_openai_client.chat.completions.create(
-#         model="gpt-4o",
-#         temperature=0,
-#         top_p=1,
-#         messages=[
-#             {"role": "user", "content": prompt},
-#         ],
-#     ).choices[0].message.content
-
     return output
 
 
@@ -284,7 +249,6 @@ def generate_ssml_script(podcast_script_text):
 
         else:
             ssml_text += f"<voice name='en-US-AriaNeural'>{add_ssml_and_style(line['text'], line['intonation'])}</voice>"
-            # print(add_ssml_and_style(line['text'], line['intonation']))
     ssml_text += "</speak>"
     return ssml_text
 
@@ -301,7 +265,7 @@ def generate_podcast_audio(subject, ssml_script):
 
     result = speech_synthesizer.speak_ssml_async(ssml_script).get()
     stream = speechsdk.AudioDataStream(result)
-    podcast_filename = 'podcast.wav'
+    podcast_filename = f"{subject}.wav"
     stream.save_to_wav_file(get_file(podcast_filename))
 
     print(stream.status)

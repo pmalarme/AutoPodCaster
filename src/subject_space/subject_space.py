@@ -16,7 +16,7 @@ import os
 import json
 
 # Load the environment variables
-load_dotenv()
+load_dotenv(override=True)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -69,7 +69,7 @@ async def get_subjects():
     container = database.get_container_client("subjects")
 
     subjects = []
-    async for item in container.query_items(
+    for item in container.query_items(
         query="SELECT * FROM subjects",
         enable_cross_partition_query=True
     ):
