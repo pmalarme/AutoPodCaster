@@ -6,17 +6,18 @@ import asyncio
 from dotenv import load_dotenv
 from azure.servicebus.aio import ServiceBusClient
 from azure.cosmos import CosmosClient
-from langchain_core.documents.base import Document
+# from langchain_core.documents.base import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_community.vectorstores.azuresearch import AzureSearch
-from langchain_community.document_loaders import WebBaseLoader
+from langchain_community.document_loaders import AsyncHtmlLoader
 
 load_dotenv()
 
 servicebus_connection_string = os.getenv("SERVICEBUS_CONNECTION_STRING")
 cosmosdb_connection_string = os.getenv("COSMOSDB_CONNECTION_STRING")
 status_endpoint = os.getenv("STATUS_ENDPOINT")
+
 
 class Input:
     id: str
@@ -48,6 +49,7 @@ class Input:
             "content": self.content
         }
 
+
 async def main():
     async with ServiceBusClient.from_connection_string(
             conn_str=servicebus_connection_string) as servicebus_client:
@@ -65,6 +67,8 @@ async def main():
                     save_to_cosmosdb(input)
                     update_status(website_input['request_id'], "Saved")
                     await receiver.complete_message(message)
+    asyncio.sleep(5)
+
 
 def save_to_cosmosdb(input: Input):
     client = CosmosClient.from_connection_string(cosmosdb_connection_string)
@@ -74,14 +78,16 @@ def save_to_cosmosdb(input: Input):
     container = database.get_container_client(container_name)
     container.create_item(body=input.to_dict())
 
+
 def update_status(request_id: str, status: str):
     status = {"status": status}
     requests.post(
         f"{status_endpoint}/status/{request_id}", json=status)
 
+
 async def index_website(website_url: str) -> Input:
-    loader = WebBaseLoader(website_url)
-    documents = await loader.load()
+    loader = AsyncHtmlLoader(website_url)
+    documents = loader.load()
 
     title = documents[0].metadata.get('title', 'Unknown Title')
     description = documents[0].metadata.get('description', '')
@@ -135,4 +141,3 @@ async def index_website(website_url: str) -> Input:
 
 while (True):
     asyncio.run(main())
-    asyncio.sleep(5)
