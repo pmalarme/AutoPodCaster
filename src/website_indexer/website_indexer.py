@@ -97,8 +97,6 @@ async def index_website(website_url: str) -> Input:
     title = soup.title.string if soup.title else 'Unknown Title'
     description = soup.description.string if soup.description else ''
 
-    url = website_url
-
     input = Input()
     input.id = str(uuid.uuid4())
     input.title = title
@@ -106,7 +104,7 @@ async def index_website(website_url: str) -> Input:
     input.last_updated = ''
     input.author = ''
     input.description = description
-    input.source = url
+    input.source = website_url
     input.type = 'website'
     input.thumbnail_url = ''
     input.topics = []
@@ -114,10 +112,34 @@ async def index_website(website_url: str) -> Input:
 
     for document in documents:
         document.metadata['title'] = title
-        document.metadata['source'] = url
+        document.metadata['source'] = website_url
         document.metadata['description'] = description
         document.metadata['thumbnail_url'] = ''
         document.metadata['type'] = 'website'
+
+        # We will extract the correct information from the html tags.
+        page_content = document.page_content
+
+        new_content = ""
+        # Extract headings
+        soup = BeautifulSoup(page_content, 'html.parser')
+        h1 = [h1.get_text(strip=True) for h1 in soup.find_all('h1')]
+        new_content += '\n\n'.join(h1)
+        h2 = [h2.get_text(strip=True) for h2 in soup.find_all('h2')]
+        new_content += '\n\n'.join(h2)
+        h3 = [h3.get_text(strip=True) for h3 in soup.find_all('h3')]
+        new_content += '\n\n'.join(h3)
+
+        # Extract paragraphs
+        soup = BeautifulSoup(page_content, 'html.parser')
+        paragraphs = [p.get_text(strip=True) for p in soup.find_all('p')]
+        new_content += '\n\n'.join(paragraphs)
+        # Extract divs
+        divs = [div.get_text(strip=True) for div in soup.find_all('div')]
+        new_content += '\n\n'.join(divs)
+
+        print(new_content)
+        document.page_content = new_content
 
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
