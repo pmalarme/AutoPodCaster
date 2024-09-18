@@ -11,8 +11,9 @@ from langchain_core.documents.base import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_community.vectorstores.azuresearch import AzureSearch
+import re
 
-load_dotenv()
+load_dotenv(override=True)
 
 servicebus_connection_string = os.getenv("SERVICEBUS_CONNECTION_STRING")
 cosmosdb_connection_string = os.getenv("COSMOSDB_CONNECTION_STRING")
@@ -91,7 +92,12 @@ async def index_note(content: str) -> Input:
     # using OpenAI GPT-4.
 
     # Create the prompt to generate the title and description.
-    prompt_template = """Generate a title and description for the following content: {content}"""
+    prompt_template = """Generate a title (max 8 words) and description (max 3 sentences) for the following content: {content}.
+     
+    Provide in following format:
+    [[Title goes here]]
+    $$Description goes here$$
+     """
     # Create the gpt-4o model client
     azure_openai_client = AzureOpenAI(
         api_key=os.environ['OPENAI_API_KEY'],
@@ -110,10 +116,19 @@ async def index_note(content: str) -> Input:
             {"role": "user", "content": prompt},
         ],
     ).choices[0].message.content
-    print(corrected_content)
 
-    title = content.split('\n')[0]
-    description = content.split('\n')[1]
+    # Title and description is returned in following format: [[Title goes here]] and $$Description goes here$$
+    # Extract the title and description from the corrected content.
+
+    # Extract the title and description from the corrected content.
+    title_match = re.search(r'\[\[(.*?)\]\]', corrected_content)
+    description_match = re.search(r'\$\$(.*?)\$\$', corrected_content)
+
+    title = title_match.group(1) if title_match else None
+    description = description_match.group(1) if description_match else None
+
+    print(f"Title: {title}")
+    print(f"Description: {description}")
 
     # Create a document from the content.
     documents = [Document(page_content=content, metadata={})]
