@@ -6,7 +6,7 @@ from openai import AzureOpenAI
 from langchain_core.documents.base import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import AzureOpenAIEmbeddings
-from langchain_community.vectorstores import LanceDB
+# from langchain_community.vectorstores import LanceDB
 from azure.cosmos import CosmosClient
 from langchain_community.vectorstores.azuresearch import AzureSearch
 

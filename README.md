@@ -4,7 +4,7 @@
 
 ```json
 {
-    "uuid": "d8b1b3b0-4b7b-4b7b-8b7b-8b7b8b7b8b7b",
+    "id": "d8b1b3b0-4b7b-4b7b-8b7b-8b7b8b7b8b7b",
     "title": "Autopodcaster",
     "date": "2021-02-06",
     "last_update": "2021-02-06",
@@ -25,7 +25,7 @@ Metadata has the same schema but not the content field.
 
 ```json
 {
-    "uuid": "d8b1b3b0-4b7b-4b7b-8b7b-8b7b8b7b8b7b",
+    "id": "d8b1b3b0-4b7b-4b7b-8b7b-8b7b8b7b8b7b",
     "subject": "LoRa fine-tuning",
     "date": "2021-02-06",
     "last_update": "2021-02-06",
@@ -38,7 +38,7 @@ Metadata has the same schema but not the content field.
 
 ```json
 {
-    "uuid": "d8b1b3b0-4b7b-4b7b-8b7b-8b7b8b7b8b7b",
+    "id": "d8b1b3b0-4b7b-4b7b-8b7b-8b7b8b7b8b7b",
     "title": "Autopodcaster",
     "date": "2021-02-06",
     "last_update": "2021-02-06",
