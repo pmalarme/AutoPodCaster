@@ -87,6 +87,7 @@ def update_status(request_id: str, status: str):
 
 
 async def index_website(website_url: str) -> Input:
+    # website_url = "https://tailwindcss.com/"
     loader = AsyncHtmlLoader(website_url)
     documents = loader.load()
 
@@ -135,10 +136,10 @@ async def index_website(website_url: str) -> Input:
         paragraphs = [p.get_text(strip=True) for p in soup.find_all('p')]
         new_content += '\n\n'.join(paragraphs)
         # Extract divs
-        divs = [div.get_text(strip=True) for div in soup.find_all('div')]
-        new_content += '\n\n'.join(divs)
+        # divs = [div.get_text(strip=True) for div in soup.find_all('div')]
+        # new_content += '\n\n'.join(divs)
 
-        print(new_content)
+        # print(new_content)
         document.page_content = new_content
 
     text_splitter = RecursiveCharacterTextSplitter(
