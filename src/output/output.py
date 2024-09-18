@@ -3,18 +3,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from azure.servicebus import ServiceBusClient, ServiceBusMessage
+from azure.cosmos import CosmosClient
+
 import requests
 import os
 import uuid
 import json
 import logging
 
+
 class InputBody(BaseModel):
     subject_id: str
     output_type: str
 
+
 class StatusBody(BaseModel):
     status: str
+
 
 load_dotenv()
 
@@ -23,6 +28,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 servicebus_connection_string = os.getenv("SERVICEBUS_CONNECTION_STRING")
+cosmosdb_connection_string = os.getenv("COSMOSDB_CONNECTION_STRING")
 subject_space_api_url = os.getenv("SUBJECT_SPACE_API_URL")
 
 status_cache = {}
@@ -37,11 +43,13 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
+
 @app.post("/output")
 async def generate_output(inputBody: InputBody):
     subject_id = inputBody.subject_id
     output_type = inputBody.output_type
-    logger.info(f"Received subject_id: {subject_id}, output_type: {output_type}")
+    logger.info(
+        f"Received subject_id: {subject_id}, output_type: {output_type}")
 
     # Generate a uuid for the request
     request_id = str(uuid.uuid4())
@@ -78,12 +86,31 @@ async def generate_output(inputBody: InputBody):
 
     return {"request_id": request_id}
 
+
+@app.get("/output/for-subject/{subject_id}")
+async def get_output_for_subject(subject_id: str):
+    # Use Cosmos DB to fetch the output for the subject
+    client = CosmosClient.from_connection_string(cosmosdb_connection_string)
+    database = client.get_database_client("autopodcaster")
+    container = database.get_container_client("outputs")
+
+    # Query the Cosmos DB container for the output
+    query = f"SELECT * FROM c WHERE c.subject_id = '{subject_id}'"
+    ouputs_iterator = container.query_items(
+        query=query, enable_cross_partition_query=True)
+    outputs = []
+    for output in ouputs_iterator:
+        outputs.append(output)
+    return outputs
+
+
 @app.get("/status/{request_id}")
 async def get_status(request_id: str):
     # If request_id is not found, return HTTP 404
     if request_id not in status_cache:
         raise HTTPException(status_code=404, detail="Request ID not found")
     return {"status": status_cache.get(request_id)}
+
 
 @app.post("/status/{request_id}")
 async def update_status(request_id: str, statusBody: StatusBody):
