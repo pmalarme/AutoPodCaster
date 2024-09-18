@@ -27,8 +27,10 @@ load_dotenv(override=True)
 servicebus_connection_string = os.getenv("SERVICEBUS_CONNECTION_STRING")
 cosmosdb_connection_string = os.getenv("COSMOSDB_CONNECTION_STRING")
 output_status_endpoint = os.getenv("OUTPUT_STATUS_ENDPOINT")
-# blob_service_client = BlobServiceClient.from_connection_string(
-#     os.getenv("STORAGE_CONNECTION_STRING"))
+blob_service_client = BlobServiceClient.from_connection_string(
+    os.getenv("STORAGE_CONNECTION_STRING"))
+container_name = "downloads"
+downloads_sas_token = os.getenv("DOWNLOADS_SAS_TOKEN")
 subject_space_endpoint = os.getenv("SUBJECT_SPACE_ENDPOINT")
 
 # Define the embeddings model
@@ -187,7 +189,8 @@ def process_podcast(subject_id: str) -> Output:
     formatted_podcast_prompt = podcast_prompt.format(podcast_outline)
     podcast_script_response = rag_chain.invoke(
         {"input": formatted_podcast_prompt})
-    podcast_script_text = podcast_script_response['answer']
+    podcast_script_text = str(podcast_script_response['answer']).replace(
+        "```json", "").replace("```", "")
     print(podcast_script_text)
     output.content = podcast_script_text
 
@@ -195,7 +198,8 @@ def process_podcast(subject_id: str) -> Output:
     output.ssml = ssml_script
     print(ssml_script)
 
-    generate_podcast_audio(subject, ssml_script)
+    blob_url_with_sas = generate_podcast_audio(output.id, ssml_script)
+    output.url = blob_url_with_sas
 
     return output
 
@@ -253,7 +257,7 @@ def generate_ssml_script(podcast_script_text):
     return ssml_text
 
 
-def generate_podcast_audio(subject, ssml_script):
+def generate_podcast_audio(id, ssml_script):
     speech_key = os.getenv("AZURE_SPEECH_KEY")
     service_region = os.getenv("AZURE_SPEECH_REGION")
 
@@ -265,12 +269,25 @@ def generate_podcast_audio(subject, ssml_script):
 
     result = speech_synthesizer.speak_ssml_async(ssml_script).get()
     stream = speechsdk.AudioDataStream(result)
-    podcast_filename = f"{subject}.wav"
+    id_without_hyphens = str(id).replace("-", "")
+    podcast_filename = f"{id_without_hyphens}.wav"
     stream.save_to_wav_file(get_file(podcast_filename))
 
     print(stream.status)
 
-    return podcast_filename
+    blob_url_with_sas = write_to_blob(podcast_filename)
+
+    return blob_url_with_sas
+
+
+def write_to_blob(file_name: str):
+    blob_client = blob_service_client.get_blob_client(
+        container=container_name, blob=file_name)
+    with open(get_file(file_name), "rb") as data:
+        result = blob_client.upload_blob(
+            data, blob_type="BlockBlob", overwrite=True)
+    blob_url_with_sas = f"{blob_client.url}?{downloads_sas_token}"
+    return blob_url_with_sas
 
 
 def get_file(file_name: str):
