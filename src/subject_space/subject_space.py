@@ -190,52 +190,18 @@ def retrieve(subject: str):
         index_name="knowledgebase",
         embedding_function=azure_openai_embeddings.embed_query,
     )
-    results = vector_store.similarity_search(
-        query=subject, k=100, search_type="hybrid")
+    results = vector_store.similarity_search_with_relevance_scores(
+        query=subject, k=100, score_threshold=0.55)
     # Create a list of unique ids from the results
     unique_ids = []
     for result in results:
-        metadata = result.metadata
+        metadata = result[0].metadata
         id = metadata['id']
-        if id not in unique_ids and check_document_is_in_the_subject(subject, metadata['title'], result.page_content):
+        print(f"Title: {metadata['title']} - Score: {result[1]}")
+        if id not in unique_ids:
             unique_ids.append(id)
 
     return unique_ids
-
-
-def check_document_is_in_the_subject(subject, title, content):
-    azure_openai_client = AzureOpenAI(
-        api_key=os.environ['OPENAI_API_KEY'],
-        azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
-        api_version=os.environ['OPENAI_API_VERSION']
-    )
-
-    prompt_template = """
-    Is the following document related to these subjects "{subject}" or at least on of the subject?
-
-    Title: {title}
-    Content:
-    {content}
-
-    Answer only "yes" or "no".
-    """
-
-    prompt_template = prompt_template.format(
-        subject=subject,
-        title=title,
-        content=content
-    )
-
-    answer = azure_openai_client.chat.completions.create(
-        model='gpt-4o',
-        temperature=0,
-        top_p=1,
-        messages=[
-            {"role": "user", "content": prompt_template}
-        ]
-    ).choices[0].message.content
-
-    return 'yes' in answer.lower()
 
 
 def create_index(index_name, input_ids):
