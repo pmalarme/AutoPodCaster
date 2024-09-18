@@ -28,9 +28,17 @@ SERVICEBUS_CONNECTION_STRING=$(az servicebus namespace authorization-rule keys l
 # Create a storage account for multipart file upload with a blob container
 az storage account create --name $STORAGE_ACCOUNT_NAME --resource-group $RESOURCE_GROUP_NAME --location $LOCATION --sku Standard_LRS
 az storage container create --name "uploads" --account-name $STORAGE_ACCOUNT_NAME
+az storage container create --name "downloads" --account-name $STORAGE_ACCOUNT_NAME
 
 # Get the connection string for the storage account
 STORAGE_CONNECTION_STRING=$(az storage account show-connection-string --name $STORAGE_ACCOUNT_NAME --query connectionString --output tsv)
+
+#generate the SAS token for the downloads container
+STORAGE_ACCOUNT_KEY1=$(az storage account keys list --resource-group $RESOURCE_GROUP_NAME --account-name $STORAGE_ACCOUNT_NAME --query '[0].value' --output tsv)
+DOWNLOADS_SAS_TOKEN=$(az storage container generate-sas --name "downloads" --permissions r --expiry '2024-12-31T23:59Z' --https-only --account-name $STORAGE_ACCOUNT_NAME --account-key $STORAGE_ACCOUNT_KEY1 --output tsv)
+
+# Generate the SAS URL for the downloads container
+DOWNLOADS_SAS_URL="https://$STORAGE_ACCOUNT_NAME.blob.core.windows.net/downloads?$DOWNLOADS_SAS_TOKEN"
 
 # Create a Cosmos DB account
 az cosmosdb create --name $COSMOSDB_ACCOUNT_NAME --resource-group $RESOURCE_GROUP_NAME --locations regionName="Sweden Central" isZoneRedundant=false
@@ -42,6 +50,8 @@ az cosmosdb sql container create --name "status" --account-name $COSMOSDB_ACCOUN
 az cosmosdb sql container create --name "inputs" --account-name $COSMOSDB_ACCOUNT_NAME --database-name "autopodcaster" --resource-group $RESOURCE_GROUP_NAME --partition-key-path "/id"
 # Create subjects container
 az cosmosdb sql container create --name "subjects" --account-name $COSMOSDB_ACCOUNT_NAME --database-name "autopodcaster" --resource-group $RESOURCE_GROUP_NAME --partition-key-path "/id"
+# Create outputs container
+az cosmosdb sql container create --name "outputs" --account-name $COSMOSDB_ACCOUNT_NAME --database-name "autopodcaster" --resource-group $RESOURCE_GROUP_NAME --partition-key-path "/id"
 
 # Get the connection string for the Cosmos DB account
 COSMOSDB_CONNECTION_STRING=$(az cosmosdb list-connection-strings --name $COSMOSDB_ACCOUNT_NAME --resource-group $RESOURCE_GROUP_NAME --query connectionStrings[0].connectionString --output tsv)
@@ -54,3 +64,17 @@ AI_SEARCH_ENDPOINT=https://$AI_SEARCH_SERVICE_NAME.search.windows.net
 
 # Get the admin key for the Azure Search service
 AI_SEARCH_ADMIN_KEY=$(az search admin-key show --service-name $AI_SEARCH_SERVICE_NAME --resource-group $RESOURCE_GROUP_NAME --query primaryKey --output tsv)
+
+echo "RESROUCES"
+echo "Service Bus Connection String"
+echo $SERVICEBUS_CONNECTION_STRING
+echo "Storage Connection String"
+echo $STORAGE_CONNECTION_STRING
+echo "Downloads SAS Token"
+echo $DOWNLOADS_SAS_TOKEN
+echo "CosmosDb Connection String"
+echo $COSMOSDB_CONNECTION_STRING
+echo "AI Search Endpoint"
+echo $AI_SEARCH_ENDPOINT
+echo "AI Search Admin Key"
+echo $AI_SEARCH_ADMIN_KEY
