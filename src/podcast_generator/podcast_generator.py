@@ -1,56 +1,66 @@
-import os
-import json
-import uuid
-import requests
-import asyncio
 from dotenv import load_dotenv
-from azure.servicebus.aio import ServiceBusClient
+from azure.servicebus.aio import ServiceBusClient, AutoLockRenewer
 from azure.cosmos import CosmosClient
 from azure.cognitiveservices.speech import SpeechConfig, SpeechSynthesizer, AudioDataStream
 from openai import AzureOpenAI
 from langchain_core.documents.base import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import AzureOpenAIEmbeddings
-from langchain_community.vectorstores import LanceDB
-import whisper
-import tiktoken
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import AzureChatOpenAI
+from langchain_community.vectorstores.azuresearch import AzureSearch
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+import azure.cognitiveservices.speech as speechsdk
+import json
+
+import datetime
+import os
+import json
+import uuid
+import requests
+import asyncio
 
 load_dotenv()
 
 servicebus_connection_string = os.getenv("SERVICEBUS_CONNECTION_STRING")
 cosmosdb_connection_string = os.getenv("COSMOSDB_CONNECTION_STRING")
-status_endpoint = os.getenv("STATUS_ENDPOINT")
-subject_space_api_url = os.getenv("SUBJECT_SPACE_API_URL")
+output_status_endpoint = os.getenv("OUTPUT_STATUS_ENDPOINT")
+subject_space_endpoint = os.getenv("SUBJECT_SPACE_ENDPOINT")
 
-class Input:
+# Define the embeddings model
+azure_openai_embeddings = AzureOpenAIEmbeddings(
+    api_key=os.environ['OPENAI_API_KEY'],
+    azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
+    api_version=os.environ['OPENAI_API_VERSION'],
+    azure_deployment=os.environ['OPENAI_AZURE_DEPLOYMENT_EMBEDDINGS']
+)
+
+
+class Output:
     id: str
-    title: str
-    date: str
-    last_updated: str
-    author: str
-    description: str
-    source: str
     type: str
-    thumbnail_url: str
-    topics: list
-    entities: list
+    created_at: str
+    last_updated: str
+    url: str
+    subject_id: str
+    outline: str
     content: str
+    ssml: str
 
     def to_dict(self):
         return {
             "id": self.id,
-            "title": self.title,
-            "date": self.date,
-            "last_updated": self.last_updated,
-            "author": self.author,
-            "description": self.description,
-            "source": self.source,
             "type": self.type,
-            "thumbnail_url": self.thumbnail_url,
-            "topics": self.topics,
-            "entities": self.entities,
-            "content": self.content
+            "created_at": self.created_at,
+            "last_updated": self.last_updated,
+            "url": self.url,
+            "subject_id": self.subject_id,
+            "outline": self.outline,
+            "content": self.content,
+            "ssml": self.ssml
         }
+
 
 async def main():
     async with ServiceBusClient.from_connection_string(
@@ -64,108 +74,255 @@ async def main():
                     podcast_input = json.loads(str(message))
                     subject_id = podcast_input['subject_id']
                     update_status(podcast_input['request_id'], "Processing")
-                    input = process_podcast(subject_id)
-                    update_status(podcast_input['request_id'], "Processed")
-                    save_to_cosmosdb(input)
-                    update_status(podcast_input['request_id'], "Saved")
                     await receiver.complete_message(message)
+                    output = process_podcast(subject_id)
+                    update_status(podcast_input['request_id'], "Processed")
+                    save_to_cosmosdb(output)
+                    update_status(podcast_input['request_id'], "Saved")
 
-def save_to_cosmosdb(input: Input):
+
+def save_to_cosmosdb(output: Output):
     client = CosmosClient.from_connection_string(cosmosdb_connection_string)
     database_name = "autopodcaster"
     database = client.get_database_client(database_name)
-    container_name = "inputs"
+    container_name = "outputs"
     container = database.get_container_client(container_name)
-    container.create_item(body=input.to_dict())
+    container.create_item(body=output.to_dict())
+
 
 def update_status(request_id: str, status: str):
     status = {"status": status}
     requests.post(
-        f"{status_endpoint}/status/{request_id}", json=status)
+        f"{output_status_endpoint}/status/{request_id}", json=status)
 
-def num_tokens_from_string(string: str, encoding_name: str) -> int:
-    encoding = tiktoken.encoding_for_model(encoding_name)
-    num_tokens = len(encoding.encode(string))
-    return num_tokens
 
-def process_podcast(subject_id: str) -> Input:
-    response = requests.get(f"{subject_space_api_url}/subjects/{subject_id}")
+def process_podcast(subject_id: str) -> Output:
+    response = requests.get(f"{subject_space_endpoint}/subject/{subject_id}")
     if response.status_code != 200:
         raise Exception("Subject not found")
     subject_json = response.json()
 
-    title = subject_json['subject']
-    description = subject_json.get('description', '')
-    url = subject_json.get('url', '')
-    thumbnail_url = subject_json.get('thumbnail_url', '')
+    subject = subject_json.get('subject', '')
+    input_ids = subject_json.get('inputs', '')
+    index_name = subject_json.get('index_name', '')
 
-    input = Input()
-    input.id = str(uuid.uuid4())
-    input.title = title
-    input.date = ''
-    input.last_updated = ''
-    input.author = ''
-    input.description = description
-    input.source = url
-    input.type = 'podcast'
-    input.thumbnail_url = thumbnail_url
-    input.topics = []
-    input.entities = []
+    output = Output()
+    output.id = str(uuid.uuid4())
+    output.subject_id = subject_id
+    output.type = "podcast"
+    output.created_at = datetime.datetime.now().isoformat()
+    output.last_updated = output.created_at
+    output.url = ''
 
-    # Generate podcast script and audio
-    podcast_script = generate_podcast_script(subject_json)
-    podcast_audio = generate_podcast_audio(podcast_script)
+    system_prompt = (
+        "You are an assistant for question-answering tasks. "
+        "Use the following pieces of retrieved context to answer "
+        "the question. If you don't know the answer, say that you "
+        "don't know. Use three sentences maximum and keep the "
+        "answer concise."
+        "\n\n"
+        "{context}"
+    )
 
-    input.content = podcast_script
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system_prompt),
+            ("human", "{input}"),
+        ]
+    )
 
-    return input
+    llm = AzureChatOpenAI(
+        api_key=os.environ['OPENAI_API_KEY'],
+        azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
+        api_version=os.environ['OPENAI_API_VERSION'],
+        azure_deployment=os.environ['OPENAI_AZURE_DEPLOYMENT'],
+        temperature=0,
+        top_p=1
+    )
 
-def generate_podcast_script(subject_json):
-    title = subject_json['subject']
-    description = subject_json.get('description', '')
+    vector_store = AzureSearch(
+        azure_search_endpoint=os.getenv("AZURE_SEARCH_ENDPOINT"),
+        azure_search_key=os.getenv("AZURE_SEARCH_ADMIN_KEY"),
+        index_name=index_name,
+        embedding_function=azure_openai_embeddings.embed_query,
+    )
 
-    prompt_template = """Given title and description of a subject, can you create a podcast script. Give back only the script.
+    # GENERATE OUTLINE
 
-    Title: {title}
-    Description:
-    {description}
+    # TODO add the filtering here
+    retriever = vector_store.as_retriever()
 
-    Script:
+    question_answer_chain = create_stuff_documents_chain(llm, prompt)
+    rag_chain = create_retrieval_chain(retriever, question_answer_chain)
+
+    podcast_outline_response = rag_chain.invoke(
+        {"input": "Create an outline for a podcast on the following subject: " + subject + "."})
+    podcast_outline = podcast_outline_response['answer']
+    print(podcast_outline)
+    output.outline = podcast_outline
+
+    # GENERATE SCRIPT
+
+    podcast_prompt = f"""Create a podcast complete text based on the following reference outline document:
+
+    {podcast_outline}
+
+    This outline document comes from a video or other media document. Your role is to create the text covering the same topics as the reference document. This text will be used to generate the audio of the podcast. There are 2 participants in the podcast: the host and the cohost. The host will introduce the podcast and the guest. The cohost will explain the outline of the podcast. The host will ask questions to the cohost and the cohost will answer them. The host will thank the audience and close the podcast.
+    The name of the host is Pierre and his role is to be the listener's podcast assistant. The name of the cohost is Marie and her role is to be the expert in the podcast topic. The name of the podcast is "Advanced AI Podcast".
+
+    When you thanks someone, write "Thank you" and the name of the person without a comma. For example, "Thank you Pierre".
+
+    Output as a JSON with the following fields:
+    - title: Title of the podcast
+    - intonation: 
+    If the host Pierre is speaking the intonation can be one of these values:  ["Default", "Angry","Cheerful","Excited","Friendly","Hopeful","Sad","Shouting","Terrified","Unfriendly","Whispering"]
+    If the cohost Marie is speaking the intonation can be one of these: ["Default","Chat","Customer service","Narration - professional","Newscast - casual","Newscast - formal","Cheerful","Empathetic","Angry","Sad","Excited","Friendly","Terrified","Shouting","Unfriendly","Whispering","Hopeful"] 
+    - text: an array of objects with the speaker, the intonation and the text to be spoken
+    Return only the json as plain text.
     """
 
+    formatted_podcast_prompt = podcast_prompt.format(podcast_outline)
+    podcast_script_response = rag_chain.invoke(
+        {"input": formatted_podcast_prompt})
+    podcast_script_text = podcast_script_response['answer']
+    print(podcast_script_text)
+    output.content = podcast_script_text
+
+    ssml_script = generate_ssml_script(podcast_script_text)
+    output.ssml = ssml_script
+    print(ssml_script)
+
+    generate_podcast_audio(subject, ssml_script)
+
+#     # Generate podcast script and audio
+#     podcast_script = generate_podcast_script(subject_json)
+#     podcast_audio = generate_podcast_audio(podcast_script)
+
+#     input.content = podcast_script
+
+#     return input
+
+
+# def generate_podcast_script(subject_json):
+#     title = subject_json['subject']
+#     description = subject_json.get('description', '')
+
+#     prompt_template = """Given title and description of a subject, can you create a podcast script. Give back only the script.
+
+#     Title: {title}
+#     Description:
+#     {description}
+
+#     Script:
+#     """
+
+#     azure_openai_client = AzureOpenAI(
+#         api_key=os.environ['OPENAI_API_KEY'],
+#         azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
+#         api_version=os.environ['OPENAI_API_VERSION']
+#     )
+
+#     prompt = prompt_template.format(title=title, description=description)
+#     podcast_script_response = azure_openai_client.chat.completions.create(
+#         model="gpt-4o",
+#         temperature=0,
+#         top_p=1,
+#         messages=[
+#             {"role": "user", "content": prompt},
+#         ],
+#     ).choices[0].message.content
+
+    return output
+
+
+Jason_styles = ["Default", "Angry", "Cheerful", "Excited", "Friendly",
+                "Hopeful", "Sad", "Shouting", "Terrified", "Unfriendly", "Whispering"]
+Aria_styles = ["Default", "Chat", "Customer service", "Narration - professional", "Newscast - casual", "Newscast - formal",
+               "Cheerful", "Empathetic", "Angry", "Sad", "Excited", "Friendly", "Terrified", "Shouting", "Unfriendly", "Whispering", "Hopeful"]
+
+
+def add_ssml_and_style(line, line_style):
     azure_openai_client = AzureOpenAI(
         api_key=os.environ['OPENAI_API_KEY'],
         azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
         api_version=os.environ['OPENAI_API_VERSION']
     )
-
-    prompt = prompt_template.format(title=title, description=description)
-    podcast_script_response = azure_openai_client.chat.completions.create(
+    prompt_template = """Given following text and its entonation, rewrite the text with SSML
+    Text: {text}
+    Intonation:
+    {intonation}
+    You can use the intonation to add the style to the text as in this example:
+    '''<mstts:express-as style="Excited" styledegree="1">Hello everyone!</mstts:express-as>'''
+    The styledegree can go from 0.01 to 2
+    Note that you do not need to add the "<speak> and <voice> tags. 
+    Do not change the pitch.
+    Keep the rate always to medium
+    ONLY return the imrpoved modified text!!
+    """
+    prompt = prompt_template.format(text=line, intonation=line_style)
+    system_p = "You are an expert in SSML. You will be given a text and an intonation and you will have to return the same text improved with SSML"
+    result = azure_openai_client.chat.completions.create(
         model="gpt-4o",
         temperature=0,
         top_p=1,
         messages=[
+            {"role": "system", "content": system_p},
             {"role": "user", "content": prompt},
-        ],
-    ).choices[0].message.content
+        ]).choices[0].message.content
+    return result
 
-    return podcast_script_response
 
-def generate_podcast_audio(podcast_script):
-    speech_key = os.environ['AZURE_SPEECH_KEY']
-    service_region = os.environ['AZURE_SPEECH_REGION']
+def generate_ssml_script(podcast_script_text):
+    podcast_script_json = json.loads(str(podcast_script_text))
+    ssml_text = "<speak version='1.0' xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='en-US'>"
+    for line in podcast_script_json['text']:
+        speaker = line['speaker']
+        text = line['text']
+        if speaker == 'Pierre':
 
-    speech_config = SpeechConfig(subscription=speech_key, region=service_region)
-    speech_synthesizer = SpeechSynthesizer(speech_config=speech_config)
+            ssml_text += f"<voice name='en-US-AndrewMultilingualNeural'>{add_ssml_and_style(line['text'], line['intonation'])}</voice>"
 
-    ssml_text = f"<speak version='1.0' xmlns='https://www.w3.org/2001/10/synthesis' xml:lang='en-US'>{podcast_script}</speak>"
+        else:
+            ssml_text += f"<voice name='en-US-AriaNeural'>{add_ssml_and_style(line['text'], line['intonation'])}</voice>"
+            # print(add_ssml_and_style(line['text'], line['intonation']))
+    ssml_text += "</speak>"
+    return ssml_text
 
-    result = speech_synthesizer.speak_ssml_async(ssml_text).get()
-    stream = AudioDataStream(result)
-    podcast_filename = f"podcast_{uuid.uuid4()}.wav"
-    stream.save_to_wav_file(podcast_filename)
+
+def generate_podcast_audio(subject, ssml_script):
+    speech_key = os.getenv("AZURE_SPEECH_KEY")
+    service_region = os.getenv("AZURE_SPEECH_REGION")
+
+    speech_config = speechsdk.SpeechConfig(
+        subscription=speech_key, region=service_region)
+
+    speech_synthesizer = speechsdk.SpeechSynthesizer(
+        speech_config=speech_config)
+
+    result = speech_synthesizer.speak_ssml_async(ssml_script).get()
+    stream = speechsdk.AudioDataStream(result)
+    podcast_filename = 'podcast.wav'
+    stream.save_to_wav_file(get_file(podcast_filename))
+
+    print(stream.status)
 
     return podcast_filename
+
+
+def get_file(file_name: str):
+    """Get file path
+
+    Args:
+        file_name (str): File name
+
+    Returns:
+        File path
+    """
+    output_folder = 'outputs'
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    return os.path.join(output_folder, file_name)
+
 
 while (True):
     asyncio.run(main())

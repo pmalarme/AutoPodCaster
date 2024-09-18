@@ -56,17 +56,9 @@ async def generate_output(inputBody: InputBody):
     status_cache[request_id] = "Creating"
     logger.info(f"Generated request_id: {request_id}")
 
-    # Fetch subject JSON object using the subject space API
-    response = requests.get(f"{subject_space_api_url}/subjects/{subject_id}")
-    if response.status_code != 200:
-        raise HTTPException(status_code=404, detail="Subject not found")
-    subject_json = response.json()
-    logger.info(f"Fetched subject JSON: {subject_json}")
-
     message = {
         "request_id": request_id,
         "subject_id": subject_id,
-        "subject_json": subject_json,
         "output_type": output_type
     }
     logger.info(f"Created message: {message}")
