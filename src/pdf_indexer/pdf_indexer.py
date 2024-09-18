@@ -19,8 +19,10 @@ load_dotenv()
 servicebus_connection_string = os.getenv("SERVICEBUS_CONNECTION_STRING")
 cosmosdb_connection_string = os.getenv("COSMOSDB_CONNECTION_STRING")
 status_endpoint = os.getenv("STATUS_ENDPOINT")
-blob_service_client = BlobServiceClient.from_connection_string(os.getenv("STORAGE_CONNECTION_STRING"))
+blob_service_client = BlobServiceClient.from_connection_string(
+    os.getenv("STORAGE_CONNECTION_STRING"))
 container_name = "uploads"
+
 
 class Input:
     id: str
@@ -52,6 +54,7 @@ class Input:
             "content": self.content
         }
 
+
 async def main():
     async with ServiceBusClient.from_connection_string(
             conn_str=servicebus_connection_string) as servicebus_client:
@@ -62,13 +65,14 @@ async def main():
                     max_message_count=1, max_wait_time=5)
                 for message in received_messages:
                     pdf_input = json.loads(str(message))
-                    file_location = pdf_input['file_location']
+                    file_location = pdf_input['input']
                     update_status(pdf_input['request_id'], "Indexing")
                     input = index_pdf(file_location)
                     update_status(pdf_input['request_id'], "Indexed")
                     save_to_cosmosdb(input)
                     update_status(pdf_input['request_id'], "Saved")
                     await receiver.complete_message(message)
+
 
 def save_to_cosmosdb(input: Input):
     client = CosmosClient.from_connection_string(cosmosdb_connection_string)
@@ -78,19 +82,23 @@ def save_to_cosmosdb(input: Input):
     container = database.get_container_client(container_name)
     container.create_item(body=input.to_dict())
 
+
 def update_status(request_id: str, status: str):
     status = {"status": status}
     requests.post(
         f"{status_endpoint}/status/{request_id}", json=status)
+
 
 def num_tokens_from_string(string: str, encoding_name: str) -> int:
     encoding = tiktoken.encoding_for_model(encoding_name)
     num_tokens = len(encoding.encode(string))
     return num_tokens
 
+
 def index_pdf(file_location: str):
-    blob_client = blob_service_client.get_blob_client(container=container_name, blob=file_location)
-    download_file_path = os.path.join("downloads", file_location.split("/")[-1])
+    blob_client = blob_service_client.get_blob_client(
+        container=container_name, blob=file_location)
+    download_file_path = file_location
     with open(download_file_path, "wb") as download_file:
         download_file.write(blob_client.download_blob().readall())
 
@@ -148,6 +156,7 @@ def index_pdf(file_location: str):
     os.remove(download_file_path)
 
     return input
+
 
 while (True):
     asyncio.run(main())
