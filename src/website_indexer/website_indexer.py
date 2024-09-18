@@ -11,6 +11,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_community.vectorstores.azuresearch import AzureSearch
 from langchain_community.document_loaders import AsyncHtmlLoader
+from bs4 import BeautifulSoup
 
 load_dotenv()
 
@@ -89,8 +90,13 @@ async def index_website(website_url: str) -> Input:
     loader = AsyncHtmlLoader(website_url)
     documents = loader.load()
 
-    title = documents[0].metadata.get('title', 'Unknown Title')
-    description = documents[0].metadata.get('description', '')
+    content = documents[0].page_content
+
+    # Parse the title and description from the HTML
+    soup = BeautifulSoup(content, 'html.parser')
+    title = soup.title.string if soup.title else 'Unknown Title'
+    description = soup.description.string if soup.description else ''
+
     url = website_url
 
     input = Input()

@@ -11,3 +11,4 @@ lancedb
 azure-search-documents
 azure-identity
 playwright
+bs4
