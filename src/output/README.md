@@ -30,7 +30,7 @@ echo SUBJECT_SPACE_API_URL=${SUBJECT_SPACE_API_URL} >> .env
 ## Run the output API
 
 ```bash
-fastapi dev output.py --port 8082
+fastapi dev output.py --port 8083
 ```
 
 # Output Service Bus

@@ -3,7 +3,9 @@ import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 
-const baseURL = 'http://localhost:8081/';
+const indexerURL = 'http://localhost:8081/';
+const subjectURL = 'http://localhost:8082/';
+const outputURL = 'http://localhost:8083/';
 
 class knowledgeBaseEntry {
   constructor(entry, request_id = '', status = '', type = '') {
@@ -15,6 +17,8 @@ class knowledgeBaseEntry {
 }
 
 function App() {
+
+  //#region Indexer
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [knowledgeBaseEntries, setKnowledgeBaseEntries] = useState([]);
@@ -34,7 +38,7 @@ function App() {
     setKnowledgeBaseEntries(tmpArray);
   };
 
-  const handleSubmit = async (event) => {   
+  const handleTextIndexSubmit = async (event) => {
     event.preventDefault();
     const dataText = document.getElementById('data-text').value;
 
@@ -74,7 +78,7 @@ function App() {
     for (const entry of dataTextArray) {
       if (entry.length > 0) {
         try {
-          const response = await fetch(baseURL + 'index', {
+          const response = await fetch(indexerURL + 'index', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -135,7 +139,7 @@ function App() {
     formData.append('file', file);
 
     try {
-      const response = await fetch(baseURL + 'index_file', {
+      const response = await fetch(indexerURL + 'index_file', {
         method: 'POST',
         body: formData,
       });
@@ -171,70 +175,226 @@ function App() {
     document.getElementById('file-input').click();
   };
 
+  const checkIndexerStatus = async (requestId) => {
+    try {
+      const response = await fetch(indexerURL + 'status/' + requestId);
+      const result = await response.json();
+      var status;
+      console.log('result', result);
+      if (result.statusCode !== 200) {
+        console.error('Error fetching status:', result);
+        status = "Error";
+      }
+      else {
+        status = result.status;
+      }
+      setKnowledgeBaseEntries((prevEntries) =>
+        prevEntries.map((entry) =>
+          entry.request_id === requestId ? { ...entry, status: status } : entry
+        )
+      );
+    } catch (error) {
+      console.error('Error fetching status:', error);
+    }
+  };
+
+  const [isKnowledgeSpaceOpen, setIsKnowledgeSpaceOpen] = useState(true);
+  const toggleKnowledgeSpace = () => {
+    setIsKnowledgeSpaceOpen(!isKnowledgeSpaceOpen);
+  };
+
+  const [isKnowledgeSpaceDetailsOpen, setIsKnowledgeSpaceDetailsOpen] = useState(false);
+  const toggleKnowledgeSpaceDetails = () => {
+    setIsKnowledgeSpaceDetailsOpen(!isKnowledgeSpaceDetailsOpen);
+  };
+  //#endregion
+
+  //#region Subject Space
+  const [subjects, setSubjects] = useState([]);
+
+  useEffect(() => {
+    fetchSubjects();
+  }, []);
+
+  const fetchSubjects = async () => {
+    try {
+      const response = await fetch(subjectURL + 'subject');
+      const result = await response.json();
+      if (!result.error) {
+        setSubjects(result);
+      } else {
+        console.error('Error fetching subjects:', result.error);
+      }
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+    }
+  };
+
+  const addNewSubject = async (event) => {
+    event.preventDefault();
+    document.getElementById('subject-error').innerText = '';
+    const subject = document.getElementById("subject").value;
+    console.log('subject:', subject);
+
+    if (subject.length === 0) {
+      return;
+    }
+
+    try {
+      const response = await fetch(subjectURL + 'subject', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ subject }),
+      });
+
+      const result = await response.json();
+      if (result.statusCode === 200) {
+        document.getElementById("subject").value = '';
+        
+      } else {
+        document.getElementById('subject-error').innerText = result.detail;
+        console.error('Error creating subject:', result.error);
+      }
+    } catch (error) {
+      document.getElementById('subject-error').innerText = 'Could not create subject because ' + error;
+      console.error('Error creating subject:', error);
+    }
+    //refresh list
+    await fetchSubjects();
+  }
+
+  const deleteSubject = async (subjectId) => {
+    try {
+      const response = await fetch(subjectURL + 'subject/' + subjectId, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+      if (!result.error) {
+        setSubjects((prevSubjects) => prevSubjects.filter((subject) => subject.id !== subjectId));
+      } else {
+        console.error('Error deleting subject:', result.error);
+      }
+    } catch (error) {
+      console.error('Error deleting subject:', error);
+    }
+  };
+
+    //#endregion
   return (
     <>
       <h1>AutoPodcaster</h1>
+      <h2>My Subject Spaces</h2>
+
+      <div>
+        <form onSubmit={addNewSubject}>
+          <div>
+            <label htmlFor="subject">Subject:</label>
+            <input type="text" id="subject" name="subject" required />
+            <button type="submit">Create Subject</button>
+          </div>
+          <div id="subject-error" style={{ color: 'red' }}></div>
+        </form>
+      </div>
+      <div>
+        {subjects.length > 0 ? (
+          <ul>
+            {subjects.map((subject) => (
+              <li key={subject.id}>{subject.name} <div id="deleteSubject" onClick={deleteSubject(subject.id)}>(delete)</div></li>
+            ))}
+          </ul>
+        ) : (
+          <p>No subjects available.</p>
+        )}
+      </div>
+
       <hr />
-      <h2>My Knowledge Space</h2>
-      <form onSubmit={handleSubmit}>
-        <div
-          id='file-drop-zone'
-          onDrop={handleFileDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onClick={handleClick}
-          style={{
-            border: dragging ? '2px dashed #000' : '2px dashed #ccc',
-            padding: '20px',
-            marginTop: '10px',
-            textAlign: 'center',
-          }}
-        >
-          {uploading ? 'Uploading...' : dragging ? 'Drop the PDF or Word file here...' : 'Drag and drop a PDF or Word file here, or click to select a file'}
-        </div>
-        <input
-          id="file-input"
-          type="file"
-          style={{ display: 'none' }}
-          onChange={handleFileSelect}
-        />
-        or<br />
-        <textarea
-          id="data-text"
-          rows="2"
-          cols="75"
-          placeholder="Paste URL or text here... One URL per line"
-          onInput={handleInput}
-          style={{ overflow: 'hidden', maxHeight: '240px' }} // 10 rows * 24px
-        ></textarea>
+      <h2 onClick={toggleKnowledgeSpace}>My Knowledge Space {isKnowledgeSpaceOpen ? '(hide)' : '(show)'}</h2>
+      <div id="knowledge-space"
+        style={{
+          maxHeight: isKnowledgeSpaceOpen ? '500px' : '0',
+          overflow: 'hidden',
+          transition: 'max-height 0.5s ease-out',
+        }}
+      >
+        <form onSubmit={handleTextIndexSubmit}>
+          <div
+            id='file-drop-zone'
+            onDrop={handleFileDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onClick={handleClick}
+            style={{
+              border: dragging ? '2px dashed #000' : '2px dashed #ccc',
+              padding: '20px',
+              marginTop: '10px',
+              textAlign: 'center',
+            }}
+          >
+            {uploading ? 'Uploading...' : dragging ? 'Drop the PDF or Word file here...' : 'Drag and drop a PDF or Word file here, or click to select a file'}
+          </div>
+          <input
+            id="file-input"
+            type="file"
+            style={{ display: 'none' }}
+            onChange={handleFileSelect}
+          />
+          or<br />
+          <textarea
+            id="data-text"
+            rows="2"
+            cols="75"
+            placeholder="Paste URL or text here... One URL per line"
+            onInput={handleInput}
+            style={{ overflow: 'hidden', maxHeight: '240px' }} // 10 rows * 24px
+          ></textarea>
+          <br />
+          <button type="submit">Add to my knowledge space</button>
+        </form>
         <br />
-        <button type="submit">Add to my knowledge space</button>
-      </form>
-      <hr />
-      {knowledgeBaseEntries.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <td>Status</td>
-              <td>Request ID</td>
-              <td>Entry</td>
-              <td>Type</td>
-            </tr>
-          </thead>
-          <tbody>
-          {knowledgeBaseEntries.map((result, index) => (
-            <tr key={result.request_id}>
-              <td><div className="text-left-align">{result.status}</div></td>
-              <td><div className="text-left-align">{result.request_id}</div></td>
-              <td><div className="single-line-ellipsis">{result.entry}</div></td>
-              <td><div className="text-left-align">{result.type}</div></td>
-            </tr>
-          ))}
-          </tbody>
-        </table>
-      )}
+        <button onClick={toggleKnowledgeSpaceDetails}>
+          {isKnowledgeSpaceDetailsOpen ? 'Hide' : 'Show'} More Details
+        </button>
+        <div id="knowledge-space-details"
+          style={{
+            maxHeight: isKnowledgeSpaceDetailsOpen ? '500px' : '0',
+            overflow: 'hidden',
+            transition: 'max-height 0.5s ease-out',
+          }}>
+          <hr />
+
+          {knowledgeBaseEntries.length > 0 && (
+            <table>
+              <thead>
+                <tr>
+                  <td>Status</td>
+                  <td>Request ID</td>
+                  <td>Entry</td>
+                  <td>Type</td>
+                </tr>
+              </thead>
+              <tbody>
+                {knowledgeBaseEntries.map((result, index) => (
+                  <tr key={result.request_id}>
+                    <td><div className="text-left-align">{result.status}</div></td>
+                    <td><div className="text-left-align">
+                      <a href="#" onClick={() => checkIndexerStatus(result.request_id)}>
+                        {result.request_id}
+                      </a>
+                    </div></td>
+                    <td><div className="single-line-ellipsis">{result.entry}</div></td>
+                    <td><div className="text-left-align">{result.type}</div></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
     </>
   )
 }
 
-export default App
+export default App;
