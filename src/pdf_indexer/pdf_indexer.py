@@ -14,7 +14,7 @@ from langchain_community.vectorstores.azuresearch import AzureSearch
 from langchain_community.document_loaders import PyPDFLoader
 import tiktoken
 
-load_dotenv()
+load_dotenv(override=True)
 
 servicebus_connection_string = os.getenv("SERVICEBUS_CONNECTION_STRING")
 cosmosdb_connection_string = os.getenv("COSMOSDB_CONNECTION_STRING")
