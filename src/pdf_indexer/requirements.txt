@@ -1,0 +1,8 @@
+pypdf
+langchain
+langchain-text-splitters
+langchain-core
+langchain-community
+langchain-openai
+python-dotenv
+azure-cognitiveservices-speech
