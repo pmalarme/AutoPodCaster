@@ -6,7 +6,6 @@ import asyncio
 from dotenv import load_dotenv
 from azure.servicebus.aio import ServiceBusClient
 from azure.cosmos import CosmosClient
-# from langchain_core.documents.base import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_community.vectorstores.azuresearch import AzureSearch
@@ -87,7 +86,7 @@ def update_status(request_id: str, status: str):
 
 
 async def index_website(website_url: str) -> Input:
-    # website_url = "https://tailwindcss.com/"
+
     loader = AsyncHtmlLoader(website_url)
     documents = loader.load()
 
@@ -135,11 +134,7 @@ async def index_website(website_url: str) -> Input:
         soup = BeautifulSoup(page_content, 'html.parser')
         paragraphs = [p.get_text(strip=True) for p in soup.find_all('p')]
         new_content += '\n\n'.join(paragraphs)
-        # Extract divs
-        # divs = [div.get_text(strip=True) for div in soup.find_all('div')]
-        # new_content += '\n\n'.join(divs)
 
-        # print(new_content)
         document.page_content = new_content
 
     text_splitter = RecursiveCharacterTextSplitter(
@@ -156,6 +151,9 @@ async def index_website(website_url: str) -> Input:
     )
 
     index_name = os.getenv("AZURE_SEARCH_INDEX_NAME")
+    if index_name is None or index_name == "":
+        index_name = "knowledgebase"
+
     vector_store = AzureSearch(
         azure_search_endpoint=os.getenv("AZURE_SEARCH_ENDPOINT"),
         azure_search_key=os.getenv("AZURE_SEARCH_ADMIN_KEY"),
