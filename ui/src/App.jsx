@@ -298,7 +298,7 @@ function App() {
                 // keep the most recent one
                 podcastOutput = resultOutput.filter((output) => output.type === 'podcast').sort((a, b) => new Date(b.last_updated) - new Date(a.last_updated))[0];
               }
-              else if (resultOutput.filter((output) => output.type === 'podcast').length === 0) {
+              else if (resultOutput.filter((output) => output.type === 'podcast').length === 1) {
                 console.log('Only one podcast output found for subject:', subject.id);
                 podcastOutput = resultOutput.filter((output) => output.type === 'podcast')[0];
               }
@@ -360,7 +360,9 @@ function App() {
     
   };
 
+  var runningAddNewSubject = false;
   const addNewSubject = async (event) => {
+    if (runningAddNewSubject) { return; }
     event.preventDefault();
     document.getElementById('subject-error').innerText = '';
     const subject = document.getElementById("subject").value;
@@ -371,6 +373,7 @@ function App() {
     }
 
     try {
+      runningAddNewSubject = true;
       const response = await fetch(subjectURL + 'subject', {
         method: 'POST',
         headers: {
@@ -390,6 +393,8 @@ function App() {
     } catch (error) {
       document.getElementById('subject-error').innerText = 'Could not create subject because ' + error;
       console.error('Error creating subject:', error);
+    } finally {
+      runningAddNewSubject = false;
     }
     //refresh list
     await fetchSubjects();
