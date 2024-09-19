@@ -76,7 +76,7 @@ async def generate_output(inputBody: InputBody):
             # Update the status
             status_cache[request_id] = "Queued"
 
-    return {"request_id": request_id}
+    return message
 
 
 @app.get("/output/for-subject/{subject_id}")

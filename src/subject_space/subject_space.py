@@ -74,8 +74,9 @@ async def get_subjects():
     logger.info("Querying subjects")
     for item in container.query_items(
         query="SELECT * FROM subjects",
+        enable_cross_partition_query=True
     ):
-    subjects.append(item)
+        subjects.append(item)
 
     return subjects
 
