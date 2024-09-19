@@ -143,7 +143,7 @@ def index_pdf(file_location: str):
     )
 
     index_name = os.getenv("AZURE_SEARCH_INDEX_NAME")
-    if index_name is None:
+    if index_name is None or index_name == "":
         index_name = "knowledgebase"
 
     vector_store = AzureSearch(
