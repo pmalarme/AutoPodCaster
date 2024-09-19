@@ -173,15 +173,15 @@ def process_podcast(subject_id: str) -> Output:
     {podcast_outline}
 
     This outline document comes from a video or other media document. Your role is to create the text covering the same topics as the reference document. This text will be used to generate the audio of the podcast. There are 2 participants in the podcast: the host and the cohost. The host will introduce the podcast and the guest. The cohost will explain the outline of the podcast. The host will ask questions to the cohost and the cohost will answer them. The host will thank the audience and close the podcast.
-    The name of the host is Pierre and his role is to be the listener's podcast assistant. The name of the cohost is Marie and her role is to be the expert in the podcast topic. The name of the podcast is "Advanced AI Podcast".
+    The name of the host is Bill and his role is to be the listener's podcast assistant. The name of the cohost is Melinda and her role is to be the expert in the podcast topic. The name of the podcast is "Advanced AI Podcast".
 
-    When you thanks someone, write "Thank you" and the name of the person without a comma. For example, "Thank you Pierre".
+    When you thanks someone, write "Thank you" and the name of the person without a comma. For example, "Thank you Bill".
 
     Output as a JSON with the following fields:
     - title: Title of the podcast
     - intonation: 
-    If the host Pierre is speaking the intonation can be one of these values:  ["Default", "Angry","Cheerful","Excited","Friendly","Hopeful","Sad","Shouting","Terrified","Unfriendly","Whispering"]
-    If the cohost Marie is speaking the intonation can be one of these: ["Default","Chat","Customer service","Narration - professional","Newscast - casual","Newscast - formal","Cheerful","Empathetic","Angry","Sad","Excited","Friendly","Terrified","Shouting","Unfriendly","Whispering","Hopeful"] 
+    If the host Bill is speaking the intonation can be one of these values:  ["Default", "Angry","Cheerful","Excited","Friendly","Hopeful","Sad","Shouting","Terrified","Unfriendly","Whispering"]
+    If the cohost Melinda is speaking the intonation can be one of these: ["Default","Chat","Customer service","Narration - professional","Newscast - casual","Newscast - formal","Cheerful","Empathetic","Angry","Sad","Excited","Friendly","Terrified","Shouting","Unfriendly","Whispering","Hopeful"] 
     - text: an array of objects with the speaker, the intonation and the text to be spoken
     Return only the json as plain text.
     """
@@ -247,7 +247,7 @@ def generate_ssml_script(podcast_script_text):
     for line in podcast_script_json['text']:
         speaker = line['speaker']
         text = line['text']
-        if speaker == 'Pierre':
+        if speaker == 'Bill':
 
             ssml_text += f"<voice name='en-US-AndrewMultilingualNeural'>{add_ssml_and_style(line['text'], line['intonation'])}</voice>"
 

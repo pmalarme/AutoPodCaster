@@ -111,6 +111,7 @@ async def index_website(website_url: str) -> Input:
     input.entities = []
 
     for document in documents:
+        document.metadata['id'] = input.id
         document.metadata['title'] = title
         document.metadata['source'] = website_url
         document.metadata['description'] = description

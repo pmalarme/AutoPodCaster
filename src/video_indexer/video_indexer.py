@@ -76,11 +76,11 @@ async def main():
                     video_input = json.loads(str(message))
                     video_url = video_input['input']
                     update_status(video_input['request_id'], "Indexing")
+                    await receiver.complete_message(message)
                     input = index_video(video_url)
                     update_status(video_input['request_id'], "Indexed")
                     save_to_cosmosdb(input)
                     update_status(video_input['request_id'], "Saved")
-                    await receiver.complete_message(message)
 
 
 def save_to_cosmosdb(input: Input):

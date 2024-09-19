@@ -147,6 +147,7 @@ async def index_note(content: str) -> Input:
     input.entities = []
 
     for document in documents:
+        document.metadata['id'] = input.id
         document.metadata['title'] = title
         document.metadata['source'] = ''
         document.metadata['description'] = description

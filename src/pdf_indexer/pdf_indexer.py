@@ -64,8 +64,9 @@ async def main():
                 received_messages = await receiver.receive_messages(
                     max_message_count=1, max_wait_time=5)
                 for message in received_messages:
+                    print(str(message))
                     pdf_input = json.loads(str(message))
-                    file_location = pdf_input['input']
+                    file_location = pdf_input['file_name']
                     update_status(pdf_input['request_id'], "Indexing")
                     input = index_pdf(file_location)
                     update_status(pdf_input['request_id'], "Indexed")
@@ -123,6 +124,7 @@ def index_pdf(file_location: str):
     input.entities = []
 
     for document in documents:
+        document.metadata['id'] = input.id
         document.metadata['title'] = title
         document.metadata['source'] = url
         document.metadata['description'] = description
