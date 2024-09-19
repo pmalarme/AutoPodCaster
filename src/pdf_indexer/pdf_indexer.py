@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from azure.servicebus.aio import ServiceBusClient
 from azure.storage.blob import BlobServiceClient
 from azure.cosmos import CosmosClient
-#from langchain_core.documents.base import Document
+# from langchain_core.documents.base import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_community.vectorstores.azuresearch import AzureSearch
@@ -98,7 +98,7 @@ def num_tokens_from_string(string: str, encoding_name: str) -> int:
 def index_pdf(file_location: str):
     blob_client = blob_service_client.get_blob_client(
         container=container_name, blob=file_location)
-    download_file_path = file_location
+    download_file_path = get_file(file_location)
     with open(download_file_path, "wb") as download_file:
         download_file.write(blob_client.download_blob().readall())
 
@@ -156,6 +156,21 @@ def index_pdf(file_location: str):
     os.remove(download_file_path)
 
     return input
+
+
+def get_file(file_name: str):
+    """Get file path
+
+    Args:
+        file_name (str): File name
+
+    Returns:
+        File path
+    """
+    output_folder = 'outputs'
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    return os.path.join(output_folder, file_name)
 
 
 while (True):
