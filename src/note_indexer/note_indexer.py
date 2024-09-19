@@ -167,6 +167,9 @@ async def index_note(content: str) -> Input:
     )
 
     index_name = os.getenv("AZURE_SEARCH_INDEX_NAME")
+    if index_name is None or index_name == "":
+        index_name = "knowledgebase"
+
     vector_store = AzureSearch(
         azure_search_endpoint=os.getenv("AZURE_SEARCH_ENDPOINT"),
         azure_search_key=os.getenv("AZURE_SEARCH_ADMIN_KEY"),
