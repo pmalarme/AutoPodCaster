@@ -39,6 +39,20 @@ class subjectEntry {
   }
 }
 
+/**
+ * The main component of the AutoPodcaster application.
+ * 
+ * This component handles the following functionalities:
+ * - Manages the state of dragging, uploading, knowledge base entries, and subjects.
+ * - Retrieves and stores knowledge base entries and subjects in local storage.
+ * - Handles text and file submissions for indexing.
+ * - Fetches and displays subjects and their associated outputs.
+ * - Allows users to add new subjects and delete existing ones.
+ * - Provides UI for managing the knowledge space and subject space.
+ * 
+ * @component
+ * @returns {JSX.Element} The rendered component.
+ */
 function App() {
 
 
@@ -398,16 +412,22 @@ function App() {
     }
   };
 
+  function formatDate(string){
+    var options = { year: 'numeric', month: 'long', day: 'numeric' };
+    
+    return new Date(string).toLocaleDateString([],options) + ' ' + new Date(string).toLocaleTimeString();
+}
+
   //#endregion
   return (
     <>
-      <h1>AutoPodcaster</h1>
+      <h1>Auto<strong>Podcaster</strong></h1>
       <h2>My Subjects</h2>
 
       <div>
         <form onSubmit={addNewSubject}>
           <div>
-            <label htmlFor="subject">Enter a research subject: </label>
+            <label htmlFor="subject">Enter a subject: </label>
             <input type="text" id="subject" name="subject" required />
             <button type="submit">Create Subject</button>
           </div>
@@ -416,21 +436,18 @@ function App() {
       </div>
       <div>
         {subjects.length > 0 ? (
-          <table>
+          <table className="styled-table">
             <thead>
               <tr>
-                <td>ID</td>
-                <td>Subject</td>
+              <td>Podcast</td>
+              <td>Subject</td>
                 <td>Last Updated</td>
-                <td>Podcast</td>
+                <td>ID</td>
               </tr>
             </thead>
             <tbody>
               {subjects.map((result, index) => (
                 <tr key={result.subject_id}>
-                  <td><div className="text-left-align">{result.subject_id}</div></td>
-                  <td><div className="text-left-align">{result.subject}</div></td>
-                  <td><div className="text-left-align">{result.last_updated}</div></td>
                   <td>
                     <div id={"pod" + result.subject_id} className="text-left-align">
                       {result.podcast_status === 1 ? (
@@ -537,6 +554,9 @@ function App() {
                       ) : <a href={result.podcast_url} target="_blank" rel="noopener noreferrer">Download</a>}
                     </div>
                   </td>
+                  <td><div className="text-left-align">{result.subject}</div></td>
+                  <td><div className="text-left-align">{formatDate(result.last_updated)}</div></td>
+                  <td><div className="text-left-align">{result.subject_id}</div></td>
                 </tr>
               ))}
             </tbody>
@@ -604,7 +624,7 @@ function App() {
           <hr />
 
           {knowledgeBaseEntries.length > 0 && (
-            <table>
+            <table className="styled-table">
               <thead>
                 <tr>
                   <td>Status</td>
