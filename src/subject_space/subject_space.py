@@ -25,7 +25,8 @@ logger = logging.getLogger(__name__)
 # Config
 servicebus_connection_string = os.getenv("SERVICEBUS_CONNECTION_STRING")
 cosmosdb_connection_string = os.getenv("COSMOSDB_CONNECTION_STRING")
-
+azure_search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT")
+azure_search_admin_key = os.getenv("AZURE_SEARCH_ADMIN_KEY")
 
 class InputSubjectSpace(BaseModel):
     subject: str
@@ -69,11 +70,12 @@ async def get_subjects():
     container = database.get_container_client("subjects")
 
     subjects = []
+
+    logger.info("Querying subjects")
     for item in container.query_items(
         query="SELECT * FROM subjects",
-        enable_cross_partition_query=True
     ):
-        subjects.append(item)
+    subjects.append(item)
 
     return subjects
 
@@ -107,6 +109,8 @@ async def get_subject_inputs(subject_id: str):
 async def create_subject(inputSubjectSpace: InputSubjectSpace):
     """Create a subject in the subject space.
     """
+    logger.info("Creating a subject.")
+
     client = CosmosClient.from_connection_string(cosmosdb_connection_string)
     database = client.get_database_client("autopodcaster")
     container = database.get_container_client("subjects")
