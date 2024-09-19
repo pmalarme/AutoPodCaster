@@ -395,24 +395,7 @@ function App() {
     await fetchSubjects();
   }
 
-  const deleteSubject = async (subjectId) => {
-    try {
-      const response = await fetch(subjectURL + 'subject/' + subjectId, {
-        method: 'DELETE',
-      });
-
-      const result = await response.json();
-      if (!result.error) {
-        //setSubjects((prevSubjects) => prevSubjects.filter((subject) => subject.id !== subjectId));
-      } else {
-        console.error('Error deleting subject:', result.error);
-      }
-    } catch (error) {
-      console.error('Error deleting subject:', error);
-    }
-  };
-
-  function formatDate(string){
+    function formatDate(string){
     var options = { year: 'numeric', month: 'long', day: 'numeric' };
     
     return new Date(string).toLocaleDateString([],options) + ' ' + new Date(string).toLocaleTimeString();
@@ -443,6 +426,7 @@ function App() {
               <td>Subject</td>
                 <td>Last Updated</td>
                 <td>ID</td>
+                <td>&nbsp;</td>
               </tr>
             </thead>
             <tbody>
@@ -452,7 +436,9 @@ function App() {
                     <div id={"pod" + result.subject_id} className="text-left-align">
                       {result.podcast_status === 1 ? (
                         <button id={"pod1-" + result.subject_id} onClick={async (event) => {
+                          
                           try {
+                            
                             event.currentTarget.textContent = 'Requesting...';
                             //event.currentTarget.disabled = true;
                             console.log("requesting podcast for subject", event.currentTarget.parentElement.id);
@@ -480,6 +466,8 @@ function App() {
                             }
                           } catch (error) {
                             console.error('Error requesting podcast:', error);
+                          } finally {
+                            
                           }
                         }}>Request</button>
                       ) : result.podcast_status === 2 ? (
@@ -557,6 +545,25 @@ function App() {
                   <td><div className="text-left-align">{result.subject}</div></td>
                   <td><div className="text-left-align">{formatDate(result.last_updated)}</div></td>
                   <td><div className="text-left-align">{result.subject_id}</div></td>
+                  <td><div id={"sub" + result.subject_id} >
+                    <button onClick={async (event) => {
+                    try {
+                      var idToDelete = event.currentTarget.parentElement.id.substring(3);
+                      console.log("deleting the subject", idToDelete);
+                      const response = await fetch(subjectURL + 'subject/' + idToDelete, {
+                        method: 'DELETE',
+                      });
+                
+                      const result = await response.json();
+                      if (!result.error) {
+                        setSubjectEntries((prevSubjects) => prevSubjects.filter((subject) => subject.subject_id !== idToDelete));
+                      } else {
+                        console.error('Error deleting subject:', result.error);
+                      }
+                    } catch (error) {
+                      console.error('Error deleting subject:', error);
+                    }
+                  }}>delete</button></div></td>
                 </tr>
               ))}
             </tbody>
