@@ -409,7 +409,8 @@ function App() {
   //#endregion
   return (
     <>
-      <h1>Auto<strong>Podcaster</strong></h1>
+      <img src="src/assets/autopodcaster.png" alt="AutoPodcaster logo" style={{ width: '40%' }} />
+      
       <h2>My Subjects</h2>
 
       <div>
