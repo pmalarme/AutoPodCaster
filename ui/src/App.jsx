@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
+import { GoEyeClosed } from "react-icons/go";
+import { RxEyeOpen } from "react-icons/rx";
 
 const indexerURL = 'http://localhost:8081/';
 const subjectURL = 'http://localhost:8082/';
@@ -16,9 +18,30 @@ class knowledgeBaseEntry {
   }
 }
 
+// 3 states for each output type: 1 = Request, 2 = Processing, 3 = Done
+class subjectEntry {
+  constructor(subject_id, subject, last_updated) {
+    this.subject_id = subject_id;
+    this.subject = subject;
+    this.last_updated = last_updated;
+
+    this.podcast_id = '';
+    this.podcast_status = 1;
+    this.podcast_url = '';
+
+    this.blog_id = '';
+    this.blog_status = 1;
+    this.blog_url = '';
+
+    this.presentation_id = '';
+    this.presentation_status = 1;
+    this.presentation_url = '';
+  }
+}
+
 function App() {
 
-  //#region Indexer
+
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [knowledgeBaseEntries, setKnowledgeBaseEntries] = useState([]);
@@ -29,8 +52,14 @@ function App() {
     if (storedItems) {
       setKnowledgeBaseEntries(JSON.parse(storedItems));
     }
+    //const storedSubjects = localStorage.getItem('subjects');
+    //if (storedSubjects) {
+    //  setSubjectEntries(JSON.parse(storedSubjects));
+    //}
   }, []);
 
+
+  //#region Indexer
   const addKnowledgeBaseEntry = (newKnowledgeBaseEntries) => {
     const tmpArray = [...knowledgeBaseEntries, ...newKnowledgeBaseEntries];
     // Store the updated array in local storage
@@ -181,7 +210,8 @@ function App() {
       const result = await response.json();
       var status;
       console.log('result', result);
-      if (result.statusCode !== 200) {
+      console.log('response.status', response.status);
+      if (!result.status) {
         console.error('Error fetching status:', result);
         status = "Error";
       }
@@ -210,24 +240,110 @@ function App() {
   //#endregion
 
   //#region Subject Space
-  const [subjects, setSubjects] = useState([]);
+  const [subjects, setSubjectEntries] = useState([]);
+
+  const StoreSubjects = () => {
+    // Store the updated array in local storage
+    localStorage.setItem('subjects', JSON.stringify(subjects));
+  };
 
   useEffect(() => {
+    console.log('useEffect');
     fetchSubjects();
   }, []);
 
+  var fetchSubjectIsRunning = false;
   const fetchSubjects = async () => {
+    if (fetchSubjectIsRunning) {
+      return;
+    }
     try {
-      const response = await fetch(subjectURL + 'subject');
-      const result = await response.json();
-      if (!result.error) {
-        setSubjects(result);
+      fetchSubjectIsRunning = true;
+      // first get all subjects
+      console.log("fetching subjects");
+      console.log("current subjects:", subjects);
+      const responseSubject = await fetch(subjectURL + 'subject');
+      const resultSubject = await responseSubject.json();
+      if (!resultSubject.error) {
+        //for each subject, check if there is an output requested
+        resultSubject.forEach(async (subject) => {
+          console.log('get details for subject with id', subject.id);
+          try {
+            const responseOutput = await fetch(outputURL + 'output/for-subject/' + subject.id);
+            const resultOutput = await responseOutput.json();
+
+            if (responseOutput.status === 200) {
+              console.log('output result:', resultOutput);
+              var podcastOutput = null;
+              var presentationOutput = null;
+              var blogOutput = null;
+
+              // get the most recent podcast output, if any
+              if (resultOutput.filter((output) => output.type === 'podcast').length > 1) {
+                console.log('More than one podcast output found for subject:', subject.id);
+                // keep the most recent one
+                podcastOutput = resultOutput.filter((output) => output.type === 'podcast').sort((a, b) => new Date(b.last_updated) - new Date(a.last_updated))[0];
+              }
+              else if (resultOutput.filter((output) => output.type === 'podcast').length === 0) {
+                console.log('Only one podcast output found for subject:', subject.id);
+                podcastOutput = resultOutput.filter((output) => output.type === 'podcast')[0];
+              }
+              console.log('podcastOutput:', podcastOutput);
+              // check in the subjectEntries if the subject already exists, if not add it, if yes update the output status
+              console.log('subjectEntries:', subjects);
+              if (subjects.filter((entry) => entry.subject_id === subject.id).length === 0) {
+                console.log('new entry');
+                // new entry
+                var newSubjectEntry = new subjectEntry(
+                  subject.id,
+                  subject.subject,
+                  subject.last_updated,
+                )
+                if (podcastOutput) {
+                  newSubjectEntry.podcast_id = podcastOutput.id;
+                  newSubjectEntry.podcast_status = 3;
+                  newSubjectEntry.podcast_url = podcastOutput.url;
+                }
+
+
+                setSubjectEntries((prevEntries) => [...prevEntries, newSubjectEntry]);
+              } else {
+                console.log('update entry');
+                // update the last_updated field + any other field that might have changed
+                // get the subject by id
+                const subjectEntry = subjects.filter((entry) => entry.subject_id === subject.id)[0];
+                subjectEntry.last_updated = subject.last_updated;
+                if (podcastOutput) {
+                  subjectEntry.podcast_id = podcastOutput.id;
+                  subjectEntry.podcast_status = 3;
+                  subjectEntry.podcast_url = podcastOutput.url;
+                }
+
+                setSubjectEntries((prevEntries) =>
+                  prevEntries.map((entry) =>
+                    entry.subject_id === subject.id ? subjectEntry : entry
+                  )
+                );
+              }
+              StoreSubjects();
+            } else {
+              console.error('Error fetching output:', result.error);
+            }
+          } catch (error) {
+            console.error('Error fetching output:', error);
+          }
+          console.log("done fetching subjects");
+          console.log("loaded subjects:", subjects);
+        });
       } else {
         console.error('Error fetching subjects:', result.error);
       }
     } catch (error) {
       console.error('Error fetching subjects:', error);
+    } finally {
+      fetchSubjectIsRunning = false;
     }
+    
   };
 
   const addNewSubject = async (event) => {
@@ -250,9 +366,9 @@ function App() {
       });
 
       const result = await response.json();
-      if (result.statusCode === 200) {
+      if (response.status === 200) {
         document.getElementById("subject").value = '';
-        
+
       } else {
         document.getElementById('subject-error').innerText = result.detail;
         console.error('Error creating subject:', result.error);
@@ -273,7 +389,7 @@ function App() {
 
       const result = await response.json();
       if (!result.error) {
-        setSubjects((prevSubjects) => prevSubjects.filter((subject) => subject.id !== subjectId));
+        //setSubjects((prevSubjects) => prevSubjects.filter((subject) => subject.id !== subjectId));
       } else {
         console.error('Error deleting subject:', result.error);
       }
@@ -282,16 +398,16 @@ function App() {
     }
   };
 
-    //#endregion
+  //#endregion
   return (
     <>
       <h1>AutoPodcaster</h1>
-      <h2>My Subject Spaces</h2>
+      <h2>My Subjects</h2>
 
       <div>
         <form onSubmit={addNewSubject}>
           <div>
-            <label htmlFor="subject">Subject:</label>
+            <label htmlFor="subject">Enter a research subject: </label>
             <input type="text" id="subject" name="subject" required />
             <button type="submit">Create Subject</button>
           </div>
@@ -300,21 +416,143 @@ function App() {
       </div>
       <div>
         {subjects.length > 0 ? (
-          <ul>
-            {subjects.map((subject) => (
-              <li key={subject.id}>{subject.name} <div id="deleteSubject" onClick={deleteSubject(subject.id)}>(delete)</div></li>
-            ))}
-          </ul>
-        ) : (
+          <table>
+            <thead>
+              <tr>
+                <td>ID</td>
+                <td>Subject</td>
+                <td>Last Updated</td>
+                <td>Podcast</td>
+              </tr>
+            </thead>
+            <tbody>
+              {subjects.map((result, index) => (
+                <tr key={result.subject_id}>
+                  <td><div className="text-left-align">{result.subject_id}</div></td>
+                  <td><div className="text-left-align">{result.subject}</div></td>
+                  <td><div className="text-left-align">{result.last_updated}</div></td>
+                  <td>
+                    <div id={"pod" + result.subject_id} className="text-left-align">
+                      {result.podcast_status === 1 ? (
+                        <button id={"pod1-" + result.subject_id} onClick={async (event) => {
+                          try {
+                            event.currentTarget.textContent = 'Requesting...';
+                            //event.currentTarget.disabled = true;
+                            console.log("requesting podcast for subject", event.currentTarget.parentElement.id);
+                            const response = await fetch(outputURL + 'output/', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({ subject_id: result.subject_id, output_type: 'podcast' }),
+                            });
+                            if (response.status === 200) {
+                              const result = await response.json();
+                              console.log('Success requesting podcast:', result);
+
+                              // Update the status to Processing
+                              setSubjectEntries((prevEntries) =>
+                                prevEntries.map((entry) =>
+                                  entry.subject_id === result.subject_id ? { ...entry, podcast_status: 2, podcast_id: result.request_id } : entry
+                                )
+                              );
+                              StoreSubjects();
+                              console.log('subjects: ', subjects);
+                            } else {
+                              console.error('Error requesting podcast:', response.statusText);
+                            }
+                          } catch (error) {
+                            console.error('Error requesting podcast:', error);
+                          }
+                        }}>Request</button>
+                      ) : result.podcast_status === 2 ? (
+                        <button id={"pod2-" + result.subject_id} onClick={async (event) => {
+                          try {
+                            //event.currentTarget.disabled = true;
+                            console.log("checking progress for podcast for subject", event.currentTarget.parentElement.id.substring(3));
+                            // button target
+                            const button = document.getElementById("pod2-" + event.currentTarget.parentElement.id.substring(3));
+                            console.log('button:', button);
+                            console.log('button text:', button.textContent);
+
+                            // get the id of the podcast request
+                            if (subjects.filter((entry) => entry.subject_id === result.subject_id).length > 0) {
+                              const request_id = subjects.filter((entry) => entry.subject_id === result.subject_id)[0].podcast_id;
+                              console.log('request_id:', request_id);
+
+                              const response = await fetch(outputURL + 'status/' + request_id, {
+                                method: 'GET'
+                              });
+
+                              if (response.status === 200) {
+                                const resultStatus = await response.json();
+                                console.log('Success checking progress for podcast:', resultStatus);
+                                if (resultStatus.status === 'Queued') {
+                                  console.log('Podcast still in queue');
+                                  if (!button.textContent.startsWith('Queued')) {
+                                    button.textContent = 'Queued';
+                                  } else {
+                                    button.textContent = button.textContent + '.';
+                                  }
+                                }
+                                else if (resultStatus.status === 'Processing') {
+                                  console.log('Podcast being processed.');
+                                  if (!button.textContent.startsWith('Processing')) {
+                                    button.textContent = 'Processing';
+                                  } else {
+                                    button.textContent = button.textContent + '.';
+                                  }
+                                }
+                                else if (resultStatus.status === 'Saved') {
+                                  console.log('Podcast is ready');
+                                  // Update the status to Ready
+                                  setSubjectEntries((prevEntries) =>
+                                    prevEntries.map((entry) =>
+                                      entry.subject_id === result.subject_id ? { ...entry, podcast_status: 3 } : entry
+                                    )
+                                  );
+                                  // get the subject of result.subject_id
+                                  console.log('result subject:', result.subject_id)
+                                  console.log('subject:', subjects);
+
+                                  StoreSubjects();
+                                }
+                                else {
+                                  console.error('Unexpected status:', resultStatus.status);
+                                }
+                              }
+                              else {
+                                console.error('Error checking progress for podcast:', response.statusText);
+                              }
+                            }
+                            else {
+                              console.error('Error checking progress for podcast:', 'No podcast request found');
+                            }
+                          } catch (error) {
+                            console.error('Error requesting podcast:', error);
+                          } finally {
+                            //event.currentTarget.enabled = true;
+                          }
+                        }}>Queued</button>
+                      ) : <a href={result.podcast_url} target="_blank" rel="noopener noreferrer">Download</a>}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>) : (
           <p>No subjects available.</p>
         )}
       </div>
 
       <hr />
-      <h2 onClick={toggleKnowledgeSpace}>My Knowledge Space {isKnowledgeSpaceOpen ? '(hide)' : '(show)'}</h2>
+      <h2 onClick={toggleKnowledgeSpace}>My Knowledge Space &nbsp;
+        <GoEyeClosed style={{ display: isKnowledgeSpaceOpen ? 'none' : 'inline' }} />
+        <RxEyeOpen style={{ display: isKnowledgeSpaceOpen ? 'inline' : 'none' }} />
+      </h2>
       <div id="knowledge-space"
         style={{
-          maxHeight: isKnowledgeSpaceOpen ? '500px' : '0',
+          maxHeight: isKnowledgeSpaceOpen ? '0' : '500px',
           overflow: 'hidden',
           transition: 'max-height 0.5s ease-out',
         }}
