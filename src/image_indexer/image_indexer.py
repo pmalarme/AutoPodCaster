@@ -7,12 +7,14 @@ from dotenv import load_dotenv
 from azure.servicebus.aio import ServiceBusClient
 from azure.storage.blob import BlobServiceClient
 from azure.cosmos import CosmosClient
+from openai import AzureOpenAI
 from langchain_core.documents.base import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_community.vectorstores.azuresearch import AzureSearch
-from langchain_community.document_loaders import PyPDFLoader
 import tiktoken
+import re
+import base64
 
 load_dotenv(override=True)
 
@@ -64,14 +66,15 @@ async def main():
                 received_messages = await receiver.receive_messages(
                     max_message_count=1, max_wait_time=5)
                 for message in received_messages:
-                    pdf_input = json.loads(str(message))
-                    file_location = pdf_input['input']
-                    update_status(pdf_input['request_id'], "Indexing")
-                    input = index_image(file_location)
-                    update_status(pdf_input['request_id'], "Indexed")
+                    image_input = json.loads(str(message))
+                    image_location = image_input['input']
+                    update_status(image_input['request_id'], "Indexing")
+                    input = await index_image(image_location)
+                    update_status(image_input['request_id'], "Indexed")
                     save_to_cosmosdb(input)
-                    update_status(pdf_input['request_id'], "Saved")
+                    update_status(image_input['request_id'], "Saved")
                     await receiver.complete_message(message)
+    asyncio.sleep(5)
 
 
 def save_to_cosmosdb(input: Input):
@@ -89,37 +92,81 @@ def update_status(request_id: str, status: str):
         f"{status_endpoint}/status/{request_id}", json=status)
 
 
-def num_tokens_from_string(string: str, encoding_name: str) -> int:
-    encoding = tiktoken.encoding_for_model(encoding_name)
-    num_tokens = len(encoding.encode(string))
-    return num_tokens
+def encode_image(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode("utf-8")
 
 
-def index_image(file_location: str):
+async def index_image(image_location: str) -> Input:
+
     blob_client = blob_service_client.get_blob_client(
-        container=container_name, blob=file_location)
-    download_file_path = get_file(file_location)
+        container=container_name, blob=image_location)
+    download_file_path = get_file(image_location)
     with open(download_file_path, "wb") as download_file:
         download_file.write(blob_client.download_blob().readall())
 
-    # Todo - Implement image indexing
-    # Placeholder code
-    # .....
+    base64_image = encode_image(download_file_path)
 
-    documents = [Document(
-        page_content="",
-        metadata={
-            "title": "Unknown Title",
-            "description": "",
-            "source": file_location,
-            "thumbnail_url": "",
-            "type": "image"
-        }
-    )]
+    # We will generate a title and a description from the content.
+    # using OpenAI GPT-4.
 
-    title = documents[0].metadata.get('title', 'Unknown Title')
-    description = documents[0].metadata.get('description', '')
-    url = file_location
+    # Create the prompt to generate the title and description.
+    prompt_template = """Get the content from the image and generate a title, short description (4 sentences) and full text for the content.
+       
+    Provide in following format:
+    [[Title goes here]]
+    $$Description goes here$$
+    ((Full text goes here))
+
+    """
+
+    # Create the gpt-4o model client
+    azure_openai_client = AzureOpenAI(
+        api_key=os.environ['OPENAI_API_KEY'],
+        azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
+        api_version=os.environ['OPENAI_API_VERSION']
+    )
+
+    corrected_content = azure_openai_client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0,
+        top_p=1,
+        messages=[
+            {"role": "user", "content": [
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/png;base64,{base64_image}"
+                    }
+                },
+                {
+                    "type": "text",
+                    "text": prompt_template
+                }
+            ]},
+        ],
+    ).choices[0].message.content
+    print(f"Corrected content: {corrected_content}")
+
+    # Remove the line breaks from the corrected content.
+    corrected_content = corrected_content.replace('\n', ' ')
+
+    # Title and description is returned in following format: [[Title goes here]] and $$Description goes here$$ and ((Full text goes here))
+    # Extract the title and short description and description from the corrected content.
+    title_match = re.search(r'\[\[(.*?)\]\]', corrected_content)
+    description_match = re.search(r'\$\$(.*?)\$\$', corrected_content)
+    full_text_match = re.search(r'\(\((.*?)\)\)', corrected_content)
+
+    title = title_match.group(1) if title_match else None
+    description = description_match.group(1) if description_match else None
+    full_text = full_text_match.group(1) if full_text_match else None
+
+    print(f"Title: {title}")
+    print(f"Description: {description}")
+    print(f"Full text: {full_text}")
+
+    # Create a document from the content.
+    documents = [Document(page_content="", metadata={})]
 
     input = Input()
     input.id = str(uuid.uuid4())
@@ -128,18 +175,19 @@ def index_image(file_location: str):
     input.last_updated = ''
     input.author = ''
     input.description = description
-    input.source = url
-    input.type = 'pdf'
+    input.source = ''
+    input.type = 'note'
     input.thumbnail_url = ''
     input.topics = []
     input.entities = []
 
     for document in documents:
         document.metadata['title'] = title
-        document.metadata['source'] = url
+        document.metadata['source'] = ''
         document.metadata['description'] = description
         document.metadata['thumbnail_url'] = ''
-        document.metadata['type'] = 'pdf'
+        document.metadata['type'] = 'note'
+        document.page_content = full_text
 
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
@@ -188,6 +236,11 @@ def get_file(file_name: str):
     return os.path.join(output_folder, file_name)
 
 
+def num_tokens_from_string(string: str, encoding_name: str) -> int:
+    encoding = tiktoken.encoding_for_model(encoding_name)
+    num_tokens = len(encoding.encode(string))
+    return num_tokens
+
+
 while (True):
     asyncio.run(main())
-    asyncio.sleep(5)
