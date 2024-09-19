@@ -568,7 +568,7 @@ function App() {
               ))}
             </tbody>
           </table>) : (
-          <p>No subjects available.</p>
+          <p>&nbsp;</p>
         )}
       </div>
 
