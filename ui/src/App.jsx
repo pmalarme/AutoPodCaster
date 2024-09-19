@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
 import { GoEyeClosed } from "react-icons/go";
 import { RxEyeOpen } from "react-icons/rx";
+import { RiDeleteBin6Line } from "react-icons/ri";
 
 const indexerURL = 'http://localhost:8081/';
 const subjectURL = 'http://localhost:8082/';
@@ -364,6 +363,7 @@ function App() {
   const addNewSubject = async (event) => {
     if (runningAddNewSubject) { return; }
     event.preventDefault();
+    document.getElementById('btnCreateSubject').textContent = 'Creating...';
     document.getElementById('subject-error').innerText = '';
     const subject = document.getElementById("subject").value;
     console.log('subject:', subject);
@@ -395,10 +395,11 @@ function App() {
       console.error('Error creating subject:', error);
     } finally {
       runningAddNewSubject = false;
+      document.getElementById('btnCreateSubject').textContent = 'Create subject';
     }
     //refresh list
     await fetchSubjects();
-  }
+  } 
 
     function formatDate(string){
     var options = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -418,7 +419,7 @@ function App() {
           <div>
             <label htmlFor="subject">Enter a subject: </label>
             <input type="text" id="subject" name="subject" required />
-            <button type="submit">Create Subject</button>
+            <button id="btnCreateSubject" type="submit">Create Subject</button>
           </div>
           <div id="subject-error" style={{ color: 'red' }}></div>
         </form>
@@ -569,7 +570,7 @@ function App() {
                     } catch (error) {
                       console.error('Error deleting subject:', error);
                     }
-                  }}>delete</button></div></td>
+                  }}><RiDeleteBin6Line /></button></div></td>
                 </tr>
               ))}
             </tbody>
