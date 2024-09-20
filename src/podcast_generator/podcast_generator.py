@@ -277,10 +277,9 @@ def generate_podcast_audio(id, ssml_script):
         stream.save_to_wav_file(get_file(podcast_filename))
 
         print(stream.status)
-
-        if (stream.status == 'StreamStatus.AllData'):
-            blob_url_with_sas = write_to_blob(podcast_filename)
-            return blob_url_with_sas
+        
+        blob_url_with_sas = write_to_blob(podcast_filename)
+        return blob_url_with_sas
 
         retry += 1
     return ""

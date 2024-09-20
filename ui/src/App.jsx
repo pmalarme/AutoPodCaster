@@ -586,7 +586,7 @@ function App() {
       </h2>
       <div id="knowledge-space"
         style={{
-          maxHeight: isKnowledgeSpaceOpen ? '0' : '500px',
+          maxHeight: isKnowledgeSpaceOpen ? '0' : '10000px',
           overflow: 'hidden',
           transition: 'max-height 0.5s ease-out',
         }}
