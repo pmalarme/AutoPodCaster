@@ -631,7 +631,7 @@ function App() {
         </button>
         <div id="knowledge-space-details"
           style={{
-            maxHeight: isKnowledgeSpaceDetailsOpen ? '500px' : '0',
+            maxHeight: isKnowledgeSpaceDetailsOpen ? '50000px' : '0',
             overflow: 'hidden',
             transition: 'max-height 0.5s ease-out',
           }}>
