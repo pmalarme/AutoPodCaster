@@ -229,7 +229,7 @@ def add_ssml_and_style(line, line_style):
     ONLY return the imrpoved modified text!!
     """
     prompt = prompt_template.format(text=line, intonation=line_style)
-    system_p = "You are an expert in SSML. You will be given a text and an intonation and you will have to return the same text improved with SSML"
+    system_p = "You are an expert in SSML. You will be given a text and an intonation and you will have to return the same text improved with SSML. Don't forget to escape special characters for XML."
     result = azure_openai_client.chat.completions.create(
         model="gpt-4o",
         temperature=0,
@@ -261,24 +261,29 @@ def generate_podcast_audio(id, ssml_script):
     speech_key = os.getenv("AZURE_SPEECH_KEY")
     service_region = os.getenv("AZURE_SPEECH_REGION")
 
-    speech_config = speechsdk.SpeechConfig(
-        subscription=speech_key, region=service_region)
+    retry = 1
+   
+    while retry <= 3:
+        speech_config = speechsdk.SpeechConfig(
+            subscription=speech_key, region=service_region)
 
-    speech_synthesizer = speechsdk.SpeechSynthesizer(
-        speech_config=speech_config)
+        speech_synthesizer = speechsdk.SpeechSynthesizer(
+            speech_config=speech_config)
 
-    result = speech_synthesizer.speak_ssml_async(ssml_script).get()
-    stream = speechsdk.AudioDataStream(result)
-    id_without_hyphens = str(id).replace("-", "")
-    podcast_filename = f"{id_without_hyphens}.wav"
-    stream.save_to_wav_file(get_file(podcast_filename))
+        result = speech_synthesizer.speak_ssml_async(ssml_script).get()
+        stream = speechsdk.AudioDataStream(result)
+        id_without_hyphens = str(id).replace("-", "")
+        podcast_filename = f"{id_without_hyphens}.wav"
+        stream.save_to_wav_file(get_file(podcast_filename))
 
-    print(stream.status)
+        print(stream.status)
 
-    blob_url_with_sas = write_to_blob(podcast_filename)
+        if (stream.status == 'StreamStatus.AllData'):
+            blob_url_with_sas = write_to_blob(podcast_filename)
+            return blob_url_with_sas
 
-    return blob_url_with_sas
-
+        retry += 1
+    return ""
 
 def write_to_blob(file_name: str):
     blob_client = blob_service_client.get_blob_client(
