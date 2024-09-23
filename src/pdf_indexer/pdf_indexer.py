@@ -68,11 +68,11 @@ async def main():
                     pdf_input = json.loads(str(message))
                     file_location = pdf_input['file_name']
                     update_status(pdf_input['request_id'], "Indexing")
+                    await receiver.complete_message(message)
                     input = index_pdf(file_location)
                     update_status(pdf_input['request_id'], "Indexed")
                     save_to_cosmosdb(input)
                     update_status(pdf_input['request_id'], "Saved")
-                    await receiver.complete_message(message)
 
 
 def save_to_cosmosdb(input: Input):

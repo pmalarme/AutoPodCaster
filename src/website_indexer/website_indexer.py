@@ -62,11 +62,11 @@ async def main():
                     website_input = json.loads(str(message))
                     website_url = website_input['input']
                     update_status(website_input['request_id'], "Indexing")
+                    await receiver.complete_message(message)
                     input = await index_website(website_url)
                     update_status(website_input['request_id'], "Indexed")
                     save_to_cosmosdb(input)
                     update_status(website_input['request_id'], "Saved")
-                    await receiver.complete_message(message)
     asyncio.sleep(5)
 
 
