@@ -5,4 +5,6 @@ __pycache__
 **/*.ipynb_checkpoints/
 src/notebooks/.ipynb_checkpoints/
 src/outputs/
+src/notebooks/OAI_CONFIG_LIST
+data/How to fine-tune a model using LoRA (step by step)_podcast_outline.txt
 ui/.vite/
