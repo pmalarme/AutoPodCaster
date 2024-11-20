@@ -25,6 +25,8 @@ blob_service_client = BlobServiceClient.from_connection_string(
     os.getenv("STORAGE_CONNECTION_STRING"))
 container_name = "uploads"
 
+print(f"service_bus_connection_string: {servicebus_connection_string}")
+
 
 class Input:
     id: str
@@ -120,11 +122,13 @@ async def index_image(image_location: str) -> Input:
 
     """
 
+    print(f"azure openai key: {os.environ['AZURE_OPENAI_KEY']}")
+
     # Create the gpt-4o model client
     azure_openai_client = AzureOpenAI(
-        api_key=os.environ['OPENAI_API_KEY'],
-        azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
-        api_version=os.environ['OPENAI_API_VERSION']
+        api_key=os.environ['AZURE_OPENAI_KEY'],
+        azure_endpoint=os.environ['AZURE_OPENAI_ENDPOINT'],
+        api_version=os.environ['AZURE_OPENAI_API_VERSION']
     )
 
     corrected_content = azure_openai_client.chat.completions.create(

@@ -11,3 +11,8 @@ tiktoken
 openai
 python-dotenv
 azure-cognitiveservices-speech
+azure-search-documents==11.5.2
+azure-servicebus==7.13.0
+azure-cosmos==4.8.0
+azure-storage-blob==12.24.0
+azure-identity==1.19.0

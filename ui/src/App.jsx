@@ -3,6 +3,7 @@ import './App.css'
 import { GoEyeClosed } from "react-icons/go";
 import { RxEyeOpen } from "react-icons/rx";
 import { RiDeleteBin6Line } from "react-icons/ri";
+import AudioPlayer from './AudioPlayer';
 
 const indexerURL = 'http://localhost:8081/';
 const subjectURL = 'http://localhost:8082/';
@@ -371,7 +372,6 @@ function App() {
     if (subject.length === 0) {
       return;
     }
-
     try {
       runningAddNewSubject = true;
       const response = await fetch(subjectURL + 'subject', {
@@ -379,23 +379,21 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ subject }),
+        body: JSON.stringify({ subject: subject }),
       });
 
-      const result = await response.json();
-      if (response.status === 200) {
-        document.getElementById("subject").value = '';
+      console.log('Response status:', response.status);
+      const responseText = await response.text();
+      console.log('Response body:', responseText);
 
+      if (response.ok) {
+        document.getElementById("subject").value = '';
       } else {
-        document.getElementById('subject-error').innerText = result.detail;
-        console.error('Error creating subject:', result.error);
+        document.getElementById('subject-error').innerText = responseText;
       }
     } catch (error) {
-      document.getElementById('subject-error').innerText = 'Could not create subject because ' + error;
-      console.error('Error creating subject:', error);
-    } finally {
-      runningAddNewSubject = false;
-      document.getElementById('btnCreateSubject').textContent = 'Create subject';
+      console.error('Full error:', error);
+      document.getElementById('subject-error').innerText = error.toString();
     }
     //refresh list
     await fetchSubjects();

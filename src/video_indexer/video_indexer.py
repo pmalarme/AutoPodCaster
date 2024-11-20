@@ -75,6 +75,8 @@ async def main():
                 for message in received_messages:
                     video_input = json.loads(str(message))
                     video_url = video_input['input']
+                    print(f"video object: {video_input}")
+                    print(f"Youtube url: {video_url}")
                     update_status(video_input['request_id'], "Indexing")
                     await receiver.complete_message(message)
                     input = index_video(video_url)
@@ -169,9 +171,9 @@ def index_video(video_url: str) -> Input:
 
     # Create the gpt-4o model client
     azure_openai_client = AzureOpenAI(
-        api_key=os.environ['OPENAI_API_KEY'],
-        azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
-        api_version=os.environ['OPENAI_API_VERSION']
+        api_key=os.environ['AZURE_OPENAI_KEY'],
+        azure_endpoint=os.environ['AZURE_OPENAI_ENDPOINT'],
+        api_version=os.environ['AZURE_OPENAI_API_VERSION']
     )
 
     encoding_name = 'gpt-4o'
@@ -254,10 +256,10 @@ def index_video(video_url: str) -> Input:
 
     # Define the embeddings model
     azure_openai_embeddings = AzureOpenAIEmbeddings(
-        api_key=os.environ['OPENAI_API_KEY'],
-        azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
-        api_version=os.environ['OPENAI_API_VERSION'],
-        azure_deployment=os.environ['OPENAI_AZURE_DEPLOYMENT_EMBEDDINGS']
+        api_key=os.environ['AZURE_OPENAI_KEY'],
+        azure_endpoint=os.environ['AZURE_OPENAI_ENDPOINT'],
+        api_version=os.environ['AZURE_OPENAI_API_VERSION'],
+        azure_deployment=os.environ['AZURE_OPENAI_DEPLOYMENT_EMBEDDINGS']
     )
 
     # Create the vector store

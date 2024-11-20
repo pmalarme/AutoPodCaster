@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 # Config
 servicebus_connection_string = os.getenv("SERVICEBUS_CONNECTION_STRING")
 cosmosdb_connection_string = os.getenv("COSMOSDB_CONNECTION_STRING")
-azure_search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT")
-azure_search_admin_key = os.getenv("AZURE_SEARCH_ADMIN_KEY")
+azure_search_endpoint = os.getenv("AI_SEARCH_ENDPOINT")
+azure_search_admin_key = os.getenv("AI_SEARCH_ADMIN_KEY")
 
 class InputSubjectSpace(BaseModel):
     subject: str
@@ -54,10 +54,10 @@ app.add_middleware(
 
 # Define the embeddings model
 azure_openai_embeddings = AzureOpenAIEmbeddings(
-    api_key=os.environ['OPENAI_API_KEY'],
-    azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
-    api_version=os.environ['OPENAI_API_VERSION'],
-    azure_deployment=os.environ['OPENAI_AZURE_DEPLOYMENT_EMBEDDINGS']
+    api_key=os.environ['AZURE_OPENAI_KEY'],
+    azure_endpoint=os.environ['AZURE_OPENAI_ENDPOINT'],
+    api_version=os.environ['AZURE_OPENAI_API_VERSION'],
+    azure_deployment=os.environ['AZURE_OPENAI_DEPLOYMENT_EMBEDDINGS']
 )
 
 
@@ -190,8 +190,8 @@ def get_inputs(ids):
 
 def retrieve(subject: str):
     vector_store = AzureSearch(
-        azure_search_endpoint=os.getenv("AZURE_SEARCH_ENDPOINT"),
-        azure_search_key=os.getenv("AZURE_SEARCH_ADMIN_KEY"),
+        azure_search_endpoint=os.getenv("AI_SEARCH_ENDPOINT"),
+        azure_search_key=os.getenv("AI_SEARCH_ADMIN_KEY"),
         index_name="knowledgebase",
         embedding_function=azure_openai_embeddings.embed_query,
     )
@@ -232,8 +232,8 @@ def create_index(index_name, input_ids):
     )
     splits = text_splitter.split_documents(documents)
     vector_store = AzureSearch(
-        azure_search_endpoint=os.getenv("AZURE_SEARCH_ENDPOINT"),
-        azure_search_key=os.getenv("AZURE_SEARCH_ADMIN_KEY"),
+        azure_search_endpoint=os.getenv("AI_SEARCH_ENDPOINT"),
+        azure_search_key=os.getenv("AI_SEARCH_ADMIN_KEY"),
         index_name=index_name,
         embedding_function=azure_openai_embeddings.embed_query,
     )
