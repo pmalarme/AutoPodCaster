@@ -1,13 +1,13 @@
 #!/bin/bash
 
-HASH=993875
+HASH=1
 
-RESOURCE_GROUP_NAME=${RESOURCE_GROUP_NAME:-"rg-autopodcaster-$HASH"}
+RESOURCE_GROUP_NAME=${RESOURCE_GROUP_NAME:-"rg-autopodcaster-dutch-demo"}
 LOCATION=${LOCATION:-"swedencentral"}
-SERVICEBUS_NAMESPACE_NAME=${SERVICEBUS_NAMESPACE_NAME:-"sb-autopodcaster-$HASH"}
-COSMOSDB_ACCOUNT_NAME=${COSMOSDB_ACCOUNT_NAME:-"cosno-autopodcaster-$HASH"}
-AI_SEARCH_SERVICE_NAME=${AI_SEARCH_SERVICE_NAME:-"ais-autopodcaster-$HASH"}
-STORAGE_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME:-"stautopodcaster$HASH"}
+SERVICEBUS_NAMESPACE_NAME=${SERVICEBUS_NAMESPACE_NAME:-"sb-autopodcaster-dutch-demo"}
+COSMOSDB_ACCOUNT_NAME=${COSMOSDB_ACCOUNT_NAME:-"cosno-autopodcaster-dutch-demo"}
+AI_SEARCH_SERVICE_NAME=${AI_SEARCH_SERVICE_NAME:-"ais-autopodcaster-dutch-demo"}
+STORAGE_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME:-"stautopodcasterdutchdemo01"}
 
 az group create --name $RESOURCE_GROUP_NAME --location $LOCATION
 az servicebus namespace create --resource-group $RESOURCE_GROUP_NAME --name $SERVICEBUS_NAMESPACE_NAME --location $LOCATION
@@ -89,6 +89,6 @@ echo "DOWNLOADS_SAS_TOKEN=${DOWNLOADS_SAS_TOKEN}" >> .env
 echo "CosmosDb Connection String"
 echo "COSMOSDB_CONNECTION_STRING=${COSMOSDB_CONNECTION_STRING}" >> .env
 echo "AI Search Endpoint"
-echo "AI_SEARCH_ENDPOINT=${AI_SEARCH_ENDPOINT}" >> .env
+echo "AZURE_SEARCH_ENDPOINT=${AI_SEARCH_ENDPOINT}" >> .env
 echo "AI Search Admin Key"
-echo "AI_SEARCH_ADMIN_KEY=${AI_SEARCH_ADMIN_KEY}" >> .env
+echo "AZURE_SEARCH_ADMIN_KEY=${AI_SEARCH_ADMIN_KEY}" >> .env

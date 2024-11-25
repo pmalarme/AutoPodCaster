@@ -1,10 +1,7 @@
 from dotenv import load_dotenv
-from azure.servicebus.aio import ServiceBusClient, AutoLockRenewer
+from azure.servicebus.aio import ServiceBusClient
 from azure.cosmos import CosmosClient
-from azure.cognitiveservices.speech import SpeechConfig, SpeechSynthesizer, AudioDataStream
 from openai import AzureOpenAI
-from langchain_core.documents.base import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import AzureChatOpenAI
@@ -14,7 +11,6 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 import azure.cognitiveservices.speech as speechsdk
 import json
 from azure.storage.blob import BlobServiceClient
-
 import datetime
 import os
 import json

@@ -7,13 +7,10 @@ from langchain_community.vectorstores.azuresearch import AzureSearch
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_core.documents.base import Document
-from openai import AzureOpenAI
-
 import logging
 import uuid
 import datetime
 import os
-import json
 
 # Load the environment variables
 load_dotenv(override=True)
@@ -25,8 +22,8 @@ logger = logging.getLogger(__name__)
 # Config
 servicebus_connection_string = os.getenv("SERVICEBUS_CONNECTION_STRING")
 cosmosdb_connection_string = os.getenv("COSMOSDB_CONNECTION_STRING")
-azure_search_endpoint = os.getenv("AI_SEARCH_ENDPOINT")
-azure_search_admin_key = os.getenv("AI_SEARCH_ADMIN_KEY")
+azure_search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT")
+azure_search_admin_key = os.getenv("AZURE_SEARCH_ADMIN_KEY")
 
 class InputSubjectSpace(BaseModel):
     subject: str
@@ -190,8 +187,8 @@ def get_inputs(ids):
 
 def retrieve(subject: str):
     vector_store = AzureSearch(
-        azure_search_endpoint=os.getenv("AI_SEARCH_ENDPOINT"),
-        azure_search_key=os.getenv("AI_SEARCH_ADMIN_KEY"),
+        azure_search_endpoint=os.getenv("AZURE_SEARCH_ENDPOINT"),
+        azure_search_key=os.getenv("AZURE_SEARCH_ADMIN_KEY"),
         index_name="knowledgebase",
         embedding_function=azure_openai_embeddings.embed_query,
     )
@@ -232,8 +229,8 @@ def create_index(index_name, input_ids):
     )
     splits = text_splitter.split_documents(documents)
     vector_store = AzureSearch(
-        azure_search_endpoint=os.getenv("AI_SEARCH_ENDPOINT"),
-        azure_search_key=os.getenv("AI_SEARCH_ADMIN_KEY"),
+        azure_search_endpoint=os.getenv("AZURE_SEARCH_ENDPOINT"),
+        azure_search_key=os.getenv("AZURE_SEARCH_ADMIN_KEY"),
         index_name=index_name,
         embedding_function=azure_openai_embeddings.embed_query,
     )
