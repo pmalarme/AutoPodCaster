@@ -1,13 +1,11 @@
 #!/bin/bash
 
-HASH=1
-
-RESOURCE_GROUP_NAME=${RESOURCE_GROUP_NAME:-"rg-autopodcaster-dutch-demo"}
+RESOURCE_GROUP_NAME=${RESOURCE_GROUP_NAME:-"rg-autopodcaster"}
 LOCATION=${LOCATION:-"swedencentral"}
-SERVICEBUS_NAMESPACE_NAME=${SERVICEBUS_NAMESPACE_NAME:-"sb-autopodcaster-dutch-demo"}
-COSMOSDB_ACCOUNT_NAME=${COSMOSDB_ACCOUNT_NAME:-"cosno-autopodcaster-dutch-demo"}
-AI_SEARCH_SERVICE_NAME=${AI_SEARCH_SERVICE_NAME:-"ais-autopodcaster-dutch-demo"}
-STORAGE_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME:-"stautopodcasterdutchdemo01"}
+SERVICEBUS_NAMESPACE_NAME=${SERVICEBUS_NAMESPACE_NAME:-"sb-autopodcaster"}
+COSMOSDB_ACCOUNT_NAME=${COSMOSDB_ACCOUNT_NAME:-"cosno-autopodcaster"}
+AI_SEARCH_SERVICE_NAME=${AI_SEARCH_SERVICE_NAME:-"ais-autopodcaster"}
+STORAGE_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME:-"stautopodcasterdutchdemo"}
 
 az group create --name $RESOURCE_GROUP_NAME --location $LOCATION
 az servicebus namespace create --resource-group $RESOURCE_GROUP_NAME --name $SERVICEBUS_NAMESPACE_NAME --location $LOCATION
