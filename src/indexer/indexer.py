@@ -3,10 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from azure.servicebus import ServiceBusClient, ServiceBusMessage
-from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
-
+from azure.storage.blob import BlobServiceClient
 import os
-import io
 import uuid
 import json
 import logging
@@ -62,13 +60,7 @@ async def index(inputBody: InputBody):
     queue = 'note'
     # If it is a URL
     if input.startswith("http"):
-        # If it is a YouTube URL
-        if "youtube.com" in input:
-            queue = 'video'
-        elif "youtu.be" in input:
-            queue = 'video'
-        else:
-            queue = 'website'
+        queue = 'website'
     logger.info(f"Determined queue: {queue}")
 
     # Send the message to the Service Bus
