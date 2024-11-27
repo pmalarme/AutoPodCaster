@@ -1,10 +1,7 @@
 from dotenv import load_dotenv
-from azure.servicebus.aio import ServiceBusClient, AutoLockRenewer
+from azure.servicebus.aio import ServiceBusClient
 from azure.cosmos import CosmosClient
-from azure.cognitiveservices.speech import SpeechConfig, SpeechSynthesizer, AudioDataStream
 from openai import AzureOpenAI
-from langchain_core.documents.base import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import AzureChatOpenAI
@@ -14,7 +11,6 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 import azure.cognitiveservices.speech as speechsdk
 import json
 from azure.storage.blob import BlobServiceClient
-
 import datetime
 import os
 import json
@@ -35,10 +31,10 @@ subject_space_endpoint = os.getenv("SUBJECT_SPACE_ENDPOINT")
 
 # Define the embeddings model
 azure_openai_embeddings = AzureOpenAIEmbeddings(
-    api_key=os.environ['OPENAI_API_KEY'],
-    azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
-    api_version=os.environ['OPENAI_API_VERSION'],
-    azure_deployment=os.environ['OPENAI_AZURE_DEPLOYMENT_EMBEDDINGS']
+        api_key=os.environ['AZURE_OPENAI_KEY'],
+        azure_endpoint=os.environ['AZURE_OPENAI_ENDPOINT'],
+        api_version=os.environ['AZURE_OPENAI_API_VERSION'],
+        azure_deployment=os.environ['AZURE_OPENAI_DEPLOYMENT_EMBEDDINGS']
 )
 
 
@@ -137,10 +133,10 @@ def process_podcast(subject_id: str) -> Output:
     )
 
     llm = AzureChatOpenAI(
-        api_key=os.environ['OPENAI_API_KEY'],
-        azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
-        api_version=os.environ['OPENAI_API_VERSION'],
-        azure_deployment=os.environ['OPENAI_AZURE_DEPLOYMENT'],
+        api_key=os.environ['AZURE_OPENAI_KEY'],
+        azure_endpoint=os.environ['AZURE_OPENAI_ENDPOINT'],
+        api_version=os.environ['AZURE_OPENAI_API_VERSION'],
+        azure_deployment=os.environ['AZURE_OPENAI_DEPLOYMENT'],
         temperature=0,
         top_p=1
     )
@@ -212,9 +208,9 @@ Aria_styles = ["Default", "Chat", "Customer service", "Narration - professional"
 
 def add_ssml_and_style(line, line_style):
     azure_openai_client = AzureOpenAI(
-        api_key=os.environ['OPENAI_API_KEY'],
-        azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
-        api_version=os.environ['OPENAI_API_VERSION']
+        api_key=os.environ['AZURE_OPENAI_KEY'],
+        azure_endpoint=os.environ['AZURE_OPENAI_ENDPOINT'],
+        api_version=os.environ['AZURE_OPENAI_API_VERSION']
     )
     prompt_template = """Given following text and its entonation, rewrite the text with SSML
     Text: {text}
@@ -227,6 +223,19 @@ def add_ssml_and_style(line, line_style):
     Do not change the pitch.
     Keep the rate always to medium
     ONLY return the imrpoved modified text!!
+
+    You should NEVER include in your ouput this: ```xml
+
+    To be sure write your output as plain text and never as a code snippet.
+    
+    Here are examples of output you should give:
+
+    Example output 1:
+    <mstts:express-as style="Friendly" styledegree="1.5">Welcome to the Advanced AI Podcast. I'm your host, Bill, and today we're diving into the fascinating world of LoRa and LoRaWAN. Joining me is our expert cohost, Melinda, who will help us understand the differences and applications of these technologies.</mstts:express-as>
+
+
+    Example output 2:
+    <mstts:express-as style="professional" styledegree="1">Thank you Bill. In today's episode, we'll explore what LoRa and LoRaWAN are, their key features, and how they differ. We'll also discuss their certifications, real-world applications, and future trends.</mstts:express-as>
     """
     prompt = prompt_template.format(text=line, intonation=line_style)
     system_p = "You are an expert in SSML. You will be given a text and an intonation and you will have to return the same text improved with SSML. Don't forget to escape special characters for XML."

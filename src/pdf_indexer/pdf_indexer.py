@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 from azure.servicebus.aio import ServiceBusClient
 from azure.storage.blob import BlobServiceClient
 from azure.cosmos import CosmosClient
-# from langchain_core.documents.base import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_community.vectorstores.azuresearch import AzureSearch
@@ -138,10 +137,10 @@ def index_pdf(file_location: str):
     splits = text_splitter.split_documents(documents)
 
     azure_openai_embeddings = AzureOpenAIEmbeddings(
-        api_key=os.environ['OPENAI_API_KEY'],
-        azure_endpoint=os.environ['OPENAI_AZURE_ENDPOINT'],
-        api_version=os.environ['OPENAI_API_VERSION'],
-        azure_deployment=os.environ['OPENAI_AZURE_DEPLOYMENT_EMBEDDINGS']
+        api_key=os.environ['AZURE_OPENAI_KEY'],
+        azure_endpoint=os.environ['AZURE_OPENAI_ENDPOINT'],
+        api_version=os.environ['AZURE_OPENAI_API_VERSION'],
+        azure_deployment=os.environ['AZURE_OPENAI_DEPLOYMENT_EMBEDDINGS']
     )
 
     index_name = os.getenv("AZURE_SEARCH_INDEX_NAME")

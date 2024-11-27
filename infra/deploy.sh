@@ -4,8 +4,8 @@ RESOURCE_GROUP_NAME=${RESOURCE_GROUP_NAME:-"rg-autopodcaster"}
 LOCATION=${LOCATION:-"swedencentral"}
 SERVICEBUS_NAMESPACE_NAME=${SERVICEBUS_NAMESPACE_NAME:-"sb-autopodcaster"}
 COSMOSDB_ACCOUNT_NAME=${COSMOSDB_ACCOUNT_NAME:-"cosno-autopodcaster"}
-AI_SEARCH_SERVICE_NAME=${AI_SEARCH_SERVICE_NAME:-"ais-autopodcaster$(random 5)"}
-STORAGE_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME:-"stautopodcaster"}
+AI_SEARCH_SERVICE_NAME=${AI_SEARCH_SERVICE_NAME:-"ais-autopodcaster"}
+STORAGE_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME:-"stautopodcasterdutchdemo"}
 
 az group create --name $RESOURCE_GROUP_NAME --location $LOCATION
 az servicebus namespace create --resource-group $RESOURCE_GROUP_NAME --name $SERVICEBUS_NAMESPACE_NAME --location $LOCATION
@@ -29,11 +29,11 @@ SERVICEBUS_CONNECTION_STRING=$(az servicebus namespace authorization-rule keys l
 
 # Create a storage account for multipart file upload with a blob container
 az storage account create --name $STORAGE_ACCOUNT_NAME --resource-group $RESOURCE_GROUP_NAME --location $LOCATION --sku Standard_LRS
-az storage container create --name "uploads" --account-name $STORAGE_ACCOUNT_NAME
-az storage container create --name "downloads" --account-name $STORAGE_ACCOUNT_NAME
+az storage container create --name "uploads" --account-name $STORAGE_ACCOUNT_NAME --resource-group $RESOURCE_GROUP_NAME
+az storage container create --name "downloads" --account-name $STORAGE_ACCOUNT_NAME --resource-group $RESOURCE_GROUP_NAME
 
 # Get the connection string for the storage account
-STORAGE_CONNECTION_STRING=$(az storage account show-connection-string --name $STORAGE_ACCOUNT_NAME --query connectionString --output tsv)
+STORAGE_CONNECTION_STRING=$(az storage account show-connection-string --name $STORAGE_ACCOUNT_NAME --resource-group $RESOURCE_GROUP_NAME --query connectionString --output tsv)
 
 #generate the SAS token for the downloads container
 STORAGE_ACCOUNT_KEY1=$(az storage account keys list --resource-group $RESOURCE_GROUP_NAME --account-name $STORAGE_ACCOUNT_NAME --query '[0].value' --output tsv)
@@ -72,22 +72,22 @@ echo "AZURE_SPEECH_KEY=${AZURE_SPEECH_KEY}" >> .env
 echo "AZURE_SPEECH_REGION=${AZURE_SPEECH_REGION}" >> .env
 
 # Add environment variables for OpenAI
-echo "OPENAI_API_KEY=${OPENAI_API_KEY}" >> .env
-echo "OPENAI_AZURE_ENDPOINT=${OPENAI_AZURE_ENDPOINT}" >> .env
-echo "OPENAI_AZURE_DEPLOYMENT=${OPENAI_AZURE_DEPLOYMENT}" >> .env
-echo "OPENAI_API_VERSION=${OPENAI_API_VERSION}" >> .env
-echo "OPENAI_AZURE_DEPLOYMENT_EMBEDDINGS=${OPENAI_AZURE_DEPLOYMENT_EMBEDDINGS}" >> .env
+echo "AZURE_OPENAI_KEY=${AZURE_OPENAI_KEY}" >> .env
+echo "AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}" >> .env
+echo "AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT}" >> .env
+echo "AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION}" >> .env
+echo "AZURE_OPENAI_DEPLOYMENT_EMBEDDINGS=${AZURE_OPENAI_DEPLOYMENT_EMBEDDINGS}" >> .env
 
-echo "RESROUCES"
+echo "Deployed resources"
 echo "Service Bus Connection String"
-echo $SERVICEBUS_CONNECTION_STRING
+echo "SERVICEBUS_CONNECTION_STRING=${SERVICEBUS_CONNECTION_STRING}" >> .env
 echo "Storage Connection String"
-echo $STORAGE_CONNECTION_STRING
+echo "STORAGE_CONNECTION_STRING=${STORAGE_CONNECTION_STRING}" >> .env
 echo "Downloads SAS Token"
-echo $DOWNLOADS_SAS_TOKEN
+echo "DOWNLOADS_SAS_TOKEN=${DOWNLOADS_SAS_TOKEN}" >> .env
 echo "CosmosDb Connection String"
-echo $COSMOSDB_CONNECTION_STRING
+echo "COSMOSDB_CONNECTION_STRING=${COSMOSDB_CONNECTION_STRING}" >> .env
 echo "AI Search Endpoint"
-echo $AI_SEARCH_ENDPOINT
+echo "AZURE_SEARCH_ENDPOINT=${AI_SEARCH_ENDPOINT}" >> .env
 echo "AI Search Admin Key"
-echo $AI_SEARCH_ADMIN_KEY
+echo "AZURE_SEARCH_ADMIN_KEY=${AI_SEARCH_ADMIN_KEY}" >> .env
