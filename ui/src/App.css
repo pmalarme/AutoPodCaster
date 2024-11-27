@@ -52,3 +52,25 @@
 .text-left-align {
   text-align: left;
 }
+
+.styled-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.styled-table th, .styled-table td {
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+}
+
+.styled-table thead {
+  background-color: #f2f2f2;
+}
+
+.styled-table .even-row {
+  background-color: #f9f9f9;
+}
+
+.styled-table .odd-row {
+  background-color: #ffffff;
+}

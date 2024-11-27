@@ -5,3 +5,7 @@ __pycache__
 **/*.ipynb_checkpoints/
 src/notebooks/.ipynb_checkpoints/
 src/outputs/
+src/notebooks/OAI_CONFIG_LIST
+ui/.vite/
+**/.cache
+src/notebooks/coding
