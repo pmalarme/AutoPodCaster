@@ -16,6 +16,7 @@ az servicebus queue create --resource-group $RESOURCE_GROUP_NAME --namespace-nam
 az servicebus queue create --resource-group $RESOURCE_GROUP_NAME --namespace-name $SERVICEBUS_NAMESPACE_NAME --name "word" --enable-partitioning true
 az servicebus queue create --resource-group $RESOURCE_GROUP_NAME --namespace-name $SERVICEBUS_NAMESPACE_NAME --name "video" --enable-partitioning true
 az servicebus queue create --resource-group $RESOURCE_GROUP_NAME --namespace-name $SERVICEBUS_NAMESPACE_NAME --name "website" --enable-partitioning true
+az servicebus queue create --resource-group $RESOURCE_GROUP_NAME --namespace-name $SERVICEBUS_NAMESPACE_NAME --name "visio" --enable-partitioning true
 az servicebus queue create --resource-group $RESOURCE_GROUP_NAME --namespace-name $SERVICEBUS_NAMESPACE_NAME --name "image" --enable-partitioning true
 
 # Create new queues for blog, podcast, and presentation
