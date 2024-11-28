@@ -1,4 +1,29 @@
-# Autopodcaster
+# AutoPodcaster
+
+![AutoPodcaster](./assets/autopodcaster.png)	
+
+ AutoPodcaster is an innovative application designed to streamline the process of staying informed. It aggregates a vast array of content, including website links, PDFs, videos, and audio files. The application then categorizes and organizes this content into a graph structure, making it easy to navigate and explore. This is called the `knowledge space`.
+
+ When the user wants to learn more about a specific topic, they can create a `subject space` within the application. The subject space is a curated collection of content related to the chosen topic. Output generators within the application can then create various outputs based on the subject space. For example, the application can generate a podcast, blog post, or presentation on the chosen topic.
+ 
+ ![AutoPodcaster Functional Diagram](./assets/functional_diagram.png)
+
+ AutoPodcaster leverages cutting-edge technologies such as Azure AI Search, Azure OpenAI, and multi-agent framework like Autogen to provide a seamless and efficient user experience. By automating the process of content aggregation, categorization, and output generation, AutoPodcaster enables users to stay informed and up-to-date on a wide range of topics without the need to use a notebook, categorize the content, and generate the output. It could be completely automated. We call this project a `ui-less` solution for information consumption.
+
+ AutoPodcaster was originally created by @pmalarme and @gxjorge
+. It takes its current shape during Microsoft Global Hackathon 2024 by a team of passionate hackers who are committed to making information more accessible and easier to consume. It wins the local Belgium venue and is now open-sourced for the community to use, contribute and improve.
+
+<div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="2a1e36c0-6e13-4d3d-a5dd-5b4eef861e61" data-share-badge-host="https://www.credly.com"></div><script type="text/javascript" async src="//cdn.credly.com/assets/utilities/embed.js"></script>
+
+## Current state
+
+Currently, there are some limitations to AutoPodcaster:
+* The application is not fully functional and requires additional development to support all features.
+* The graph structure is not implemented. The content is fetched using RAG and Azure AI Search.
+* The extraction of entities and categories is not implemented yet.
+* Only podcast generation is implemented.
+* The generation of podcast using agentic framework is implemented currently only in Jupyter Notebook [outline_segment_.ipynb](notebooks/outline_segment_.ipynb).
+* The subject space should be only a filter on the knowledge space when using RAG instead of creating each time a new index.
 
 ## Prerequisites
 
