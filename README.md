@@ -2,17 +2,24 @@
 
 ![AutoPodcaster](./assets/autopodcaster.png)	
 
- AutoPodcaster is an innovative application designed to streamline the process of staying informed. It aggregates a vast array of content, including website links, PDFs, videos, and audio files. The application then categorizes and organizes this content into a graph structure, making it easy to navigate and explore. This is called the `knowledge space`.
+AutoPodcaster is an innovative application designed to streamline the process of staying informed. It aggregates a vast array of content, including website links, PDFs, videos, and audio files. The application then categorizes and organizes this content into a graph structure, making it easy to navigate and explore. This is called the `knowledge space`.
 
- When the user wants to learn more about a specific topic, they can create a `subject space` within the application. The subject space is a curated collection of content related to the chosen topic. Output generators within the application can then create various outputs based on the subject space. For example, the application can generate a podcast, blog post, or presentation on the chosen topic.
+When the user wants to learn more about a specific topic, they can create a `subject space` within the application. The subject space is a curated collection of content related to the chosen topic. Output generators within the application can then create various outputs based on the subject space. For example, the application can generate a podcast, blog post, or presentation on the chosen topic.
  
- ![AutoPodcaster Functional Diagram](./assets/functional_diagram.png)
+![AutoPodcaster Functional Diagram](./assets/functional_diagram.png)
 
- AutoPodcaster leverages cutting-edge technologies such as Azure AI Search, Azure OpenAI, and multi-agent framework like Autogen to provide a seamless and efficient user experience. By automating the process of content aggregation, categorization, and output generation, AutoPodcaster enables users to stay informed and up-to-date on a wide range of topics without the need to use a notebook, categorize the content, and generate the output. It could be completely automated. We call this project a `ui-less` solution for information consumption.
+AutoPodcaster leverages cutting-edge technologies such as Azure AI Search, Azure OpenAI, and multi-agent framework like Autogen to provide a seamless and efficient user experience. By automating the process of content aggregation, categorization, and output generation, AutoPodcaster enables users to stay informed and up-to-date on a wide range of topics without the need to use a notebook, categorize the content, and generate the output. It could be completely automated. We call this project a `ui-less` solution for information consumption.
 
- AutoPodcaster was originally created by Pierre Malarme and Jorge Garcia Ximenez. It takes its current shape during Microsoft Global Hackathon 2024 by a team of passionate hackers who are committed to making information more accessible and easier to consume. It wins the local Belgium venue and is now open-sourced for the community to use, contribute and improve.
+AutoPodcaster was originally created by Pierre Malarme and Jorge Garcia Ximenez. It takes its current shape during Microsoft Global Hackathon 2024 by a team of passionate hackers who are committed to making information more accessible and easier to consume. It wins the local Belgium venue and is now open-sourced for the community to use, contribute and improve. A big thank you to the team and to Mateo Echeverry Hoyos for the support cleaning this repository before publication
 
-!Contributors
+[<img src="https://github.com/pmalarme.png" width="60px;" style="border-radius: 50%" alt="Pierre Malarme" />](https://github.com/pmalarme)
+[<img src="https://github.com/gxjorge.png" width="60px;" style="border-radius: 50%" alt="Jorge Garcia Ximenez" />](https://github.com/gxjorge)
+[<img src="https://github.com/cedricve.png" width="60px;" style="border-radius: 50%" alt="Cédric Verstraeten" />](https://github.com/cedricve)
+[<img src="https://github.com/bjcmit.png" width="60px;" style="border-radius: 50%" alt="Bryan J Smithbjcmit" />](https://github.com/bjcmit)
+[<img src="https://github.com/ivana61.png" width="60px;" style="border-radius: 50%" alt="ivana61" />](https://github.com/ivana61)
+[<img src="https://github.com/rdesutter.png" width="60px;" style="border-radius: 50%" alt="rdesutter" />](https://github.com/rdesutter)
+[<img src="https://github.com/KarolGel.png" width="60px;" style="border-radius: 50%" alt="Karolien Gellynck" />](https://github.com/KarolGel)
+[<img src="https://github.com/mateo762.png" width="60px;" style="border-radius: 50%" alt="Mateo Echeverry Hoyos" />](https://github.com/mateo762)
 
 ## Current state
 
